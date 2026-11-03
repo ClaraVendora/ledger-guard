@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { Box, Button, HStack, Link } from "@chakra-ui/react";
 import { api, setToken } from "@/lib/api";
+import { PageTitle, Notice, TextField } from "@/components/ui/bits";
 
 export default function Login() {
   const [email, setEmail] = useState("dana@example.com");
@@ -16,18 +18,17 @@ export default function Login() {
     } catch (ex: any) { setErr(ex.message); }
   };
   return (
-    <div className="form">
-      <h1>Log in</h1>
-      <p className="sub">Demo accounts: dana@example.com, jj.quick@example.com, sam@example.com. Password: password123.</p>
+    <Box maxW="420px">
+      <PageTitle title="Log in" sub="Demo accounts: dana@example.com, jj.quick@example.com, sam@example.com. Password: password123." />
       <form onSubmit={submit}>
-        <label className="field">Email<input value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-        <label className="field">Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-        {err && <div className="alert err" style={{ marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button className="btn">Log in</button>
-          <a className="small" href="/forgot">Forgot password?</a>
-        </div>
+        <TextField label="Email" value={email} onChange={setEmail} />
+        <TextField label="Password" type="password" value={password} onChange={setPassword} />
+        {err && <Notice kind="err">{err}</Notice>}
+        <HStack gap="4">
+          <Button type="submit" bg="brand.500" color="white" _hover={{ bg: "brand.600" }}>Log in</Button>
+          <Link href="/forgot" fontSize="sm" fontFamily="system-ui, sans-serif" color="gray.600">Forgot password?</Link>
+        </HStack>
       </form>
-    </div>
+    </Box>
   );
 }

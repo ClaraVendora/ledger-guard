@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { Box, Button, Link } from "@chakra-ui/react";
 import { api } from "@/lib/api";
+import { PageTitle, Notice, TextField } from "@/components/ui/bits";
 
 export default function Forgot() {
   const [email, setEmail] = useState("dana@example.com");
@@ -9,18 +11,22 @@ export default function Forgot() {
     e.preventDefault();
     setDone(await api<{ delivered: boolean }>("/auth/forgot", { method: "POST", body: JSON.stringify({ email }) }));
   };
+  const mailbox = process.env.NEXT_PUBLIC_MAILBOX_URL;
   return (
-    <div className="form">
-      <h1>Forgot your password?</h1>
-      <p className="sub">We will email you a link to set a new one.</p>
+    <Box maxW="420px">
+      <PageTitle title="Forgot your password?" sub="We will email you a link to set a new one." />
       {done ? (
-        <div className="alert ok">If that address exists, a reset link is on its way.{done.delivered && process.env.NEXT_PUBLIC_MAILBOX_URL && <> Open the <a href={process.env.NEXT_PUBLIC_MAILBOX_URL} target="_blank" rel="noreferrer"><u>inbox</u></a>.</>}{!done.delivered && <> Email delivery is not configured here; the link is in the <a href="/outbox"><u>outbox</u></a>.</>}</div>
+        <Notice kind="ok">
+          If that address exists, a reset link is on its way.
+          {done.delivered && mailbox && <> Open the <Link href={mailbox} target="_blank" rel="noreferrer" textDecoration="underline">inbox</Link>.</>}
+          {!done.delivered && <> Email delivery is not configured here; the link is in the <Link href="/outbox" textDecoration="underline">outbox</Link>.</>}
+        </Notice>
       ) : (
         <form onSubmit={submit}>
-          <label className="field">Email<input value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-          <button className="btn">Send reset link</button>
+          <TextField label="Email" value={email} onChange={setEmail} />
+          <Button type="submit" bg="brand.500" color="white" _hover={{ bg: "brand.600" }}>Send reset link</Button>
         </form>
       )}
-    </div>
+    </Box>
   );
 }

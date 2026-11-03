@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Button, Input, Link, Table, Text } from "@chakra-ui/react";
 import { api, getCart, setCart, money, type Product, type CartItem } from "@/lib/api";
+import { Card, PageTitle } from "@/components/ui/bits";
 
 export default function Cart() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -11,19 +13,18 @@ export default function Cart() {
   const total = cart.reduce((a, i) => a + (products.find((p) => p.sku === i.sku)?.price ?? 0) * i.qty, 0);
   return (
     <>
-      <h1>Your cart</h1>
-      <p className="sub">{cart.length ? `${cart.reduce((a, i) => a + i.qty, 0)} items` : "Empty."} <a className="small" onClick={preset} style={{ cursor: "pointer", textDecoration: "underline" }}>load the wine order</a></p>
-      <div className="card">
-        <table className="table">
-          <tbody>
+      <PageTitle title="Your cart" sub={<>{cart.length ? `${cart.reduce((a, i) => a + i.qty, 0)} items` : "Empty."} <Link onClick={preset} textDecoration="underline" cursor="pointer" fontFamily="system-ui, sans-serif" fontSize="sm">load the wine order</Link></>} />
+      <Card>
+        <Table.Root size="sm" fontFamily="system-ui, sans-serif">
+          <Table.Body>
             {cart.map((i) => { const p = products.find((x) => x.sku === i.sku); return (
-              <tr key={i.sku}><td>{p?.name ?? i.sku}</td><td><input type="number" min={0} value={i.qty} onChange={(e) => update(i.sku, Number(e.target.value))} style={{ width: 56 }} /></td><td style={{ textAlign: "right" }}>{money((p?.price ?? 0) * i.qty)}</td></tr>
+              <Table.Row key={i.sku}><Table.Cell>{p?.name ?? i.sku}</Table.Cell><Table.Cell><Input size="xs" type="number" min={0} width="64px" value={i.qty} onChange={(e) => update(i.sku, Number(e.target.value))} /></Table.Cell><Table.Cell textAlign="right">{money((p?.price ?? 0) * i.qty)}</Table.Cell></Table.Row>
             ); })}
-            <tr><td colSpan={2}><strong>Total</strong></td><td style={{ textAlign: "right" }}><strong>{money(total)}</strong></td></tr>
-          </tbody>
-        </table>
-        <div style={{ marginTop: 12 }}><a className="btn" href="/checkout">Checkout</a></div>
-      </div>
+            <Table.Row><Table.Cell colSpan={2}><Text fontWeight="semibold">Total</Text></Table.Cell><Table.Cell textAlign="right"><Text fontWeight="semibold">{money(total)}</Text></Table.Cell></Table.Row>
+          </Table.Body>
+        </Table.Root>
+        <Button asChild mt="3" bg="brand.500" color="white" _hover={{ bg: "brand.600" }} size="sm"><a href="/checkout">Checkout</a></Button>
+      </Card>
     </>
   );
 }

@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Badge, Box, Button, Code, Field, HStack, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { api, getToken, money, type Me } from "@/lib/api";
+import { Card, PageTitle, H2, Notice, TextField } from "@/components/ui/bits";
+
+const Primary = (p: React.ComponentProps<typeof Button>) => <Button bg="brand.500" color="white" _hover={{ bg: "brand.600" }} size="sm" {...p} />;
 
 export default function Account() {
   const [me, setMe] = useState<Me | null>(null);
@@ -12,7 +16,7 @@ export default function Account() {
 
   const load = () => api<Me>("/me").then(setMe).catch(() => { location.href = "/login"; });
   useEffect(() => { if (!getToken()) location.href = "/login"; else load(); }, []);
-  if (!me) return <p className="sub">Loading…</p>;
+  if (!me) return <Text color="gray.600">Loading…</Text>;
 
   const act = async (label: string, fn: () => Promise<any>) => {
     setMsg(null);
@@ -22,65 +26,73 @@ export default function Account() {
 
   return (
     <>
-      <h1>Hi {me.customer.name.split(" ")[0]}</h1>
-      <p className="sub">{me.customer.email} · member since {new Date(me.customer.createdAt).toLocaleDateString()} · this device <span className="mono">{me.deviceId}</span></p>
-      {msg && <div className={`alert ${msg.kind}`} style={{ marginBottom: 16 }}>{msg.text}</div>}
-      <div className="card balance">
-        <div className="b"><div className="k">Points</div><div className="v">{me.balances.points.toFixed(0)}</div><div className="small">1 point = $1 at checkout</div></div>
-        <div className="b"><div className="k">Store credit</div><div className="v">{money(me.balances.credit)}</div></div>
-        <div className="b"><div className="k">Gift cards</div><div className="v">{money(me.balances.giftCards.reduce((a, g) => a + g.balance, 0))}</div><div className="small">{me.balances.giftCards.map((g) => g.code).join(", ") || "none"}</div></div>
-      </div>
+      <PageTitle title={`Hi ${me.customer.name.split(" ")[0]}`} sub={<>{me.customer.email} · member since {new Date(me.customer.createdAt).toLocaleDateString()} · this device <Code size="sm">{me.deviceId}</Code></>} />
+      {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
+      <Card>
+        <SimpleGrid columns={3} gap="4">
+          <Box><Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">Points</Text><Text fontSize="2xl" fontWeight="semibold">{me.balances.points.toFixed(0)}</Text><Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">1 point = $1 at checkout</Text></Box>
+          <Box><Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">Store credit</Text><Text fontSize="2xl" fontWeight="semibold">{money(me.balances.credit)}</Text></Box>
+          <Box><Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">Gift cards</Text><Text fontSize="2xl" fontWeight="semibold">{money(me.balances.giftCards.reduce((a, g) => a + g.balance, 0))}</Text><Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">{me.balances.giftCards.map((g) => g.code).join(", ") || "none"}</Text></Box>
+        </SimpleGrid>
+      </Card>
 
-      <div className="two" style={{ marginTop: 24 }}>
-        <div>
-          <h2>Send points or credit</h2>
-          <div className="card">
-            <label className="field">To (email)<input value={xfer.toEmail} onChange={(e) => setXfer({ ...xfer, toEmail: e.target.value })} /></label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <label className="field">What<select value={xfer.kind} onChange={(e) => setXfer({ ...xfer, kind: e.target.value })}><option value="credit">Store credit</option><option value="points">Points</option></select></label>
-              <label className="field">Amount<input type="number" value={xfer.amount} onChange={(e) => setXfer({ ...xfer, amount: Number(e.target.value) })} /></label>
-            </div>
-            <button className="btn" onClick={() => act("Transfer", () => api("/value/transfer", { method: "POST", body: JSON.stringify(xfer) }))}>Send</button>
-          </div>
-
-          <h2>Gift cards</h2>
-          <div className="card">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <label className="field">Buy, amount<input type="number" value={gc.amount} onChange={(e) => setGc({ ...gc, amount: Number(e.target.value) })} /></label>
-              <label className="field">Card<input value={gc.cardFingerprint} onChange={(e) => setGc({ ...gc, cardFingerprint: e.target.value })} /></label>
-            </div>
-            <button className="btn" onClick={() => act("Gift card purchase", () => api("/giftcards/buy", { method: "POST", body: JSON.stringify(gc) }))}>Buy gift card</button>
-            <div style={{ marginTop: 16 }}>
-              <label className="field">Check a balance<input value={code} onChange={(e) => setCode(e.target.value)} /></label>
-              <button className="btn secondary" onClick={() => act("Balance check", async () => { const r = await api<{ valid: boolean; balance?: number }>(`/giftcards/balance?code=${encodeURIComponent(code)}`); setMsg({ kind: r.valid ? "ok" : "err", text: r.valid ? `Balance ${money(r.balance!)}` : "No such card" }); return null; })}>Check</button>
-            </div>
-          </div>
-        </div>
-        <div>
-          <h2>Addresses</h2>
-          <div className="card">
-            {me.addresses.map((a) => <div key={a.id} style={{ marginBottom: 6 }}>{a.line1}, {a.city} {a.zip} <span className="mono muted">{a.id}</span></div>)}
-            <div style={{ borderTop: "1px solid var(--line)", margin: "12px 0" }} />
-            <label className="field">Add a new address<input value={addr.line1} onChange={(e) => setAddr({ ...addr, line1: e.target.value })} /></label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <label className="field">City<input value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} /></label>
-              <label className="field">Zip<input value={addr.zip} onChange={(e) => setAddr({ ...addr, zip: e.target.value })} /></label>
-            </div>
-            <button className="btn secondary" onClick={() => act("Address", () => api("/addresses", { method: "POST", body: JSON.stringify(addr) }))}>Add address</button>
-          </div>
-
-          <h2>Recent orders</h2>
-          <div className="card">
-            {me.orders.length === 0 && <div className="muted">No orders yet on this account.</div>}
-            {me.orders.map((o) => (
-              <div key={o.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px dashed var(--line)" }}>
-                <span className="mono">{o.id.slice(-6).toUpperCase()}</span><span className="small">{new Date(o.createdAt).toLocaleDateString()}</span><span>{money(o.total)}</span><span className="pill">{o.status}</span>
-                {o.status === "placed" && <button className="btn secondary" style={{ padding: "2px 8px" }} onClick={() => act("Refund claim", () => api(`/orders/${o.id}/refund`, { method: "POST", body: JSON.stringify({ amount: Number((o.total * 0.6).toFixed(2)), reason: "item_not_received", destination: "credit" }) }))}>Claim missing item</button>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <SimpleGrid columns={{ base: 1, md: 2 }} gap="6">
+        <Box>
+          <H2>Send points or credit</H2>
+          <Card>
+            <TextField label="To (email)" value={xfer.toEmail} onChange={(v) => setXfer({ ...xfer, toEmail: v })} />
+            <SimpleGrid columns={2} gap="3">
+              <Field.Root mb="3" fontFamily="system-ui, sans-serif"><Field.Label fontSize="sm" color="gray.600">What</Field.Label>
+                <NativeSelect.Root><NativeSelect.Field bg="white" value={xfer.kind} onChange={(e) => setXfer({ ...xfer, kind: e.target.value })}><option value="credit">Store credit</option><option value="points">Points</option></NativeSelect.Field><NativeSelect.Indicator /></NativeSelect.Root>
+              </Field.Root>
+              <TextField label="Amount" type="number" value={xfer.amount} onChange={(v) => setXfer({ ...xfer, amount: Number(v) })} />
+            </SimpleGrid>
+            <Primary onClick={() => act("Transfer", () => api("/value/transfer", { method: "POST", body: JSON.stringify(xfer) }))}>Send</Primary>
+          </Card>
+          <H2>Gift cards</H2>
+          <Card>
+            <SimpleGrid columns={2} gap="3">
+              <TextField label="Buy, amount" type="number" value={gc.amount} onChange={(v) => setGc({ ...gc, amount: Number(v) })} />
+              <TextField label="Card" value={gc.cardFingerprint} onChange={(v) => setGc({ ...gc, cardFingerprint: v })} />
+            </SimpleGrid>
+            <Primary onClick={() => act("Gift card purchase", () => api("/giftcards/buy", { method: "POST", body: JSON.stringify(gc) }))}>Buy gift card</Primary>
+            <Box mt="4">
+              <TextField label="Check a balance" value={code} onChange={setCode} />
+              <Button size="sm" variant="outline" onClick={() => act("Balance check", async () => { const r = await api<{ valid: boolean; balance?: number }>(`/giftcards/balance?code=${encodeURIComponent(code)}`); setMsg({ kind: r.valid ? "ok" : "err", text: r.valid ? `Balance ${money(r.balance!)}` : "No such card" }); return null; })}>Check</Button>
+            </Box>
+          </Card>
+        </Box>
+        <Box>
+          <H2>Addresses</H2>
+          <Card>
+            <Stack gap="1" mb="3">
+              {me.addresses.map((a) => <Text key={a.id}>{a.line1}, {a.city} {a.zip} <Code size="xs" variant="plain" color="gray.500">{a.id}</Code></Text>)}
+            </Stack>
+            <TextField label="Add a new address" value={addr.line1} onChange={(v) => setAddr({ ...addr, line1: v })} />
+            <SimpleGrid columns={2} gap="3">
+              <TextField label="City" value={addr.city} onChange={(v) => setAddr({ ...addr, city: v })} />
+              <TextField label="Zip" value={addr.zip} onChange={(v) => setAddr({ ...addr, zip: v })} />
+            </SimpleGrid>
+            <Button size="sm" variant="outline" onClick={() => act("Address", () => api("/addresses", { method: "POST", body: JSON.stringify(addr) }))}>Add address</Button>
+          </Card>
+          <H2>Recent orders</H2>
+          <Card>
+            {me.orders.length === 0 && <Text color="gray.600">No orders yet on this account.</Text>}
+            <Stack gap="2">
+              {me.orders.map((o) => (
+                <HStack key={o.id} fontFamily="system-ui, sans-serif" fontSize="sm" gap="3">
+                  <Code size="xs">{o.id.slice(-6).toUpperCase()}</Code>
+                  <Text color="gray.500">{new Date(o.createdAt).toLocaleDateString()}</Text>
+                  <Text>{money(o.total)}</Text>
+                  <Badge size="sm" colorPalette={o.status === "placed" ? "green" : o.status === "blocked" ? "red" : "orange"}>{o.status}</Badge>
+                  <Box flex="1" />
+                  {o.status === "placed" && <Button size="xs" variant="outline" onClick={() => act("Refund claim", () => api(`/orders/${o.id}/refund`, { method: "POST", body: JSON.stringify({ amount: Number((o.total * 0.6).toFixed(2)), reason: "item_not_received", destination: "credit" }) }))}>Claim missing item</Button>}
+                </HStack>
+              ))}
+            </Stack>
+          </Card>
+        </Box>
+      </SimpleGrid>
     </>
   );
 }

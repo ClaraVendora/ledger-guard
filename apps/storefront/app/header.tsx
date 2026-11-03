@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Box, Code, HStack, Link, NativeSelect, Text } from "@chakra-ui/react";
 import { getToken, getCart, deviceId, getNet, setNet, type Net } from "@/lib/api";
+
+const NETS: [string, string][] = [["US:residential", "US home broadband"], ["US:mobile", "US mobile"], ["US:datacentre", "US datacentre"], ["NG:vpn", "NG via VPN"], ["RO:residential", "RO residential"], ["DE:tor", "DE Tor exit"]];
 
 export function Header() {
   const [authed, setAuthed] = useState(false);
@@ -10,33 +13,36 @@ export function Header() {
   useEffect(() => {
     const sync = () => { setAuthed(Boolean(getToken())); setN(getCart().reduce((a, i) => a + i.qty, 0)); setDev(deviceId()); setNetState(getNet()); };
     sync();
-    window.addEventListener("storage", sync);
     const t = setInterval(sync, 1000);
-    return () => { window.removeEventListener("storage", sync); clearInterval(t); };
+    return () => clearInterval(t);
   }, []);
+  const navLink = (href: string, label: string) => <Link key={href} href={href} color="gray.600" _hover={{ color: "gray.900", textDecoration: "none" }} fontFamily="system-ui, sans-serif" fontSize="sm">{label}</Link>;
   return (
-    <header>
-      <a className="logo" href="/">Orchard &amp; Vine</a>
-      <span className="small">device <span className="mono">{dev}</span></span>
-      <span className="small">
-        network{" "}
-        <select className="mono" style={{ font: "inherit", background: "transparent", border: "1px solid var(--line)", borderRadius: 6, padding: "2px 4px" }} value={`${net.country}:${net.network}`} onChange={(e) => { const [country, network] = e.target.value.split(":"); setNet({ country, network: network as Net["network"] }); setNetState(getNet()); }}>
-          <option value="US:residential">US home broadband</option>
-          <option value="US:mobile">US mobile</option>
-          <option value="US:datacentre">US datacentre</option>
-          <option value="NG:vpn">NG via VPN</option>
-          <option value="RO:residential">RO residential</option>
-          <option value="DE:tor">DE Tor exit</option>
-        </select>
-      </span>
-      <nav>
-        <a href="/">Shop</a>
-        <a href="/cart">Cart{n ? ` (${n})` : ""}</a>
-        <a href="/account">Account</a>
-        {process.env.NEXT_PUBLIC_MAILBOX_URL && <a href={process.env.NEXT_PUBLIC_MAILBOX_URL} target="_blank" rel="noreferrer">Inbox</a>}
-        <a href="/outbox">Outbox</a>
-        {authed ? <a href="/logout">Log out</a> : <a href="/login">Log in</a>}
-      </nav>
-    </header>
+    <Box as="header" bg="white" borderBottomWidth="1px" px="8" py="4">
+      <HStack gap="6">
+        <Link href="/" fontSize="xl" fontWeight="bold" _hover={{ textDecoration: "none" }}>Orchard &amp; Vine</Link>
+        <HStack gap="1" fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">
+          <Text>device</Text><Code size="xs">{dev}</Code>
+        </HStack>
+        <HStack gap="2" fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">
+          <Text>network</Text>
+          <NativeSelect.Root size="xs" width="160px">
+            <NativeSelect.Field value={`${net.country}:${net.network}`} onChange={(e) => { const [country, network] = e.target.value.split(":"); setNet({ country, network: network as Net["network"] }); setNetState(getNet()); }}>
+              {NETS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </HStack>
+        <Box flex="1" />
+        <HStack gap="5">
+          {navLink("/", "Shop")}
+          {navLink("/cart", `Cart${n ? ` (${n})` : ""}`)}
+          {navLink("/account", "Account")}
+          {process.env.NEXT_PUBLIC_MAILBOX_URL && <Link href={process.env.NEXT_PUBLIC_MAILBOX_URL} target="_blank" rel="noreferrer" color="gray.600" fontFamily="system-ui, sans-serif" fontSize="sm">Inbox</Link>}
+          {navLink("/outbox", "Outbox")}
+          {authed ? navLink("/logout", "Log out") : navLink("/login", "Log in")}
+        </HStack>
+      </HStack>
+    </Box>
   );
 }

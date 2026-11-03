@@ -1,9 +1,15 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { Box, Button, Checkbox, Field, Heading, HStack, Link, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { api, getCart, setCart, getToken, money, type Product, type Me } from "@/lib/api";
+import { Card, PageTitle, Notice, TextField } from "@/components/ui/bits";
 
 type Blocked = { status: "blocked"; orderId: string; message: string; reasonCode: string };
 type Placed = { status: "placed" | "review"; orderId: string; total: number; tenders: any[]; paymentIntent: any };
+
+const Row = ({ k, v, bold }: { k: string; v: string; bold?: boolean }) => (
+  <HStack justify="space-between" py="2" borderBottomWidth={bold ? 0 : "1px"} borderStyle="dashed" fontFamily="system-ui, sans-serif" fontSize={bold ? "md" : "sm"} fontWeight={bold ? "semibold" : undefined}><Text>{k}</Text><Text>{v}</Text></HStack>
+);
 
 export default function Checkout() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -23,10 +29,9 @@ export default function Checkout() {
     api<Me>("/me").then((m) => {
       setMe(m);
       setAddressId(m.addresses.at(-1)?.id ?? "");
-      // default: use everything the account holds, so a stored-value-heavy order is one click
       setUsePoints(Math.floor(m.balances.points));
       setUseCredit(Math.floor(m.balances.credit));
-      setUseGc(m.balances.giftCards.filter((g) => g.balance > 0).map((g) => g.code));
+      setUseGc([]); // gift cards off by default so a card leg is visible unless the shopper ticks one
     });
   }, []);
 
@@ -52,61 +57,66 @@ export default function Checkout() {
     setBusy(false);
   };
 
-  if (!me) return <p className="sub">Loading…</p>;
+  if (!me) return <Text color="gray.600">Loading…</Text>;
 
   if (result?.status === "blocked") return (
-    <div className="card block">
-      <div className="x">!</div>
-      <h1>We couldn't complete your order</h1>
-      <p className="sub" style={{ maxWidth: 440, margin: "8px auto 16px" }}>{result.message}</p>
-      <p className="small">Nothing has been charged and no stored value has been used.</p>
-      <a className="btn secondary" href="/account">Back to account</a>
-    </div>
+    <Card textAlign="center" py="12">
+      <Box display="inline-flex" alignItems="center" justifyContent="center" w="56px" h="56px" rounded="full" bg="red.50" color="red.600" fontSize="2xl" mb="3">!</Box>
+      <Heading size="2xl" mb="2">We couldn't complete your order</Heading>
+      <Text color="gray.600" maxW="440px" mx="auto" mb="3">{result.message}</Text>
+      <Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500" mb="4">Nothing has been charged and no stored value has been used.</Text>
+      <Button asChild variant="outline" size="sm"><a href="/account">Back to account</a></Button>
+    </Card>
   );
   if (result) return (
-    <div className="card block">
-      <div className="x" style={{ background: "#e8f3ea", color: "var(--ok)" }}>✓</div>
-      <h1>{result.status === "review" ? "Order received, we're just checking a detail" : "Order placed"}</h1>
-      <p className="sub">Order {result.orderId.slice(-6).toUpperCase()} · {money(result.total)}{result.paymentIntent ? ` · card ${result.paymentIntent.fake ? "(simulated)" : result.paymentIntent.status}` : " · no card charge"}</p>
-      <a className="btn secondary" href="/account">Back to account</a>
-    </div>
+    <Card textAlign="center" py="12">
+      <Box display="inline-flex" alignItems="center" justifyContent="center" w="56px" h="56px" rounded="full" bg="green.50" color="green.700" fontSize="2xl" mb="3">✓</Box>
+      <Heading size="2xl" mb="2">{result.status === "review" ? "Order received, we're just checking a detail" : "Order placed"}</Heading>
+      <Text color="gray.600" mb="4">Order {result.orderId.slice(-6).toUpperCase()} · {money(result.total)}{result.paymentIntent ? ` · card ${result.paymentIntent.fake ? "(simulated)" : result.paymentIntent.status}` : " · no card charge"}</Text>
+      <Button asChild variant="outline" size="sm"><a href="/account">Back to account</a></Button>
+    </Card>
   );
+
+  const label = (t: string) => <Field.Label fontSize="sm" color="gray.600">{t}</Field.Label>;
 
   return (
     <>
-      <h1>Checkout</h1>
-      <p className="sub">{cart.reduce((a, i) => a + i.qty, 0)} items · {money(total)}</p>
-      <div className="two">
-        <div className="card">
-          <label className="field">Deliver to
-            <select value={addressId} onChange={(e) => setAddressId(e.target.value)}>
-              {me.addresses.map((a) => <option key={a.id} value={a.id}>{a.line1}, {a.city} {a.zip}</option>)}
-            </select>
-          </label>
-          <div className="small" style={{ marginBottom: 12 }}>Need a new address? Add it on your <a href="/account"><u>account</u></a> page.</div>
-          <label className="field">Use points (have {me.balances.points.toFixed(0)})<input type="number" value={usePoints} onChange={(e) => setUsePoints(Number(e.target.value))} /></label>
-          <label className="field">Use store credit (have {money(me.balances.credit)})<input type="number" value={useCredit} onChange={(e) => setUseCredit(Number(e.target.value))} /></label>
-          <div className="field">Gift cards
-            {me.balances.giftCards.map((g) => (
-              <label key={g.code} style={{ display: "flex", gap: 8, alignItems: "center", color: "var(--ink)" }}>
-                <input type="checkbox" checked={useGc.includes(g.code)} onChange={(e) => setUseGc(e.target.checked ? [...useGc, g.code] : useGc.filter((c) => c !== g.code))} />{g.code} ({money(g.balance)})
-              </label>
-            ))}
-            {me.balances.giftCards.length === 0 && <span className="muted">none on this account</span>}
-          </div>
-          <label className="field">Card on file: Visa ····4242 <select value={avs} onChange={(e) => setAvs(e.target.value as any)}><option value="pass">billing address matches</option><option value="fail">billing address mismatch (simulate AVS fail)</option></select></label>
-        </div>
-        <div className="card">
-          <div className="tender"><span>Points</span><span>{money(split.pts)}</span></div>
-          <div className="tender"><span>Store credit</span><span>{money(split.cr)}</span></div>
-          <div className="tender"><span>Gift cards</span><span>{money(split.gc)}</span></div>
-          <div className="tender"><span>Card</span><span>{money(split.card)}</span></div>
-          <div className="tender total"><span>Total</span><span>{money(total)}</span></div>
-          {err && <div className="alert err" style={{ margin: "12px 0" }}>{err}</div>}
-          <button className="btn warm" style={{ width: "100%", marginTop: 16 }} disabled={busy || !cart.length || !addressId} onClick={pay}>{busy ? "Checking…" : `Pay ${money(total)}`}</button>
-          <div className="small" style={{ marginTop: 8 }}>Stored value is applied first; the card covers the rest.</div>
-        </div>
-      </div>
+      <PageTitle title="Checkout" sub={`${cart.reduce((a, i) => a + i.qty, 0)} items · ${money(total)}`} />
+      <SimpleGrid columns={{ base: 1, md: 2 }} gap="6" alignItems="start">
+        <Card>
+          <Stack gap="1" fontFamily="system-ui, sans-serif">
+            <Field.Root mb="1">{label("Deliver to")}
+              <NativeSelect.Root><NativeSelect.Field bg="white" value={addressId} onChange={(e) => setAddressId(e.target.value)}>{me.addresses.map((a) => <option key={a.id} value={a.id}>{a.line1}, {a.city} {a.zip}</option>)}</NativeSelect.Field><NativeSelect.Indicator /></NativeSelect.Root>
+            </Field.Root>
+            <Text fontSize="xs" color="gray.500" mb="3">Need a new address? Add it on your <Link href="/account" textDecoration="underline">account</Link> page.</Text>
+            <TextField label={`Use points (have ${me.balances.points.toFixed(0)})`} type="number" value={usePoints} onChange={(v) => setUsePoints(Number(v))} />
+            <TextField label={`Use store credit (have ${money(me.balances.credit)})`} type="number" value={useCredit} onChange={(v) => setUseCredit(Number(v))} />
+            <Field.Root mb="3">{label("Gift cards")}
+              <Stack gap="1">
+                {me.balances.giftCards.map((g) => (
+                  <Checkbox.Root key={g.code} size="sm" checked={useGc.includes(g.code)} onCheckedChange={(e) => setUseGc(e.checked ? [...useGc, g.code] : useGc.filter((c) => c !== g.code))}>
+                    <Checkbox.HiddenInput /><Checkbox.Control /><Checkbox.Label>{g.code} ({money(g.balance)})</Checkbox.Label>
+                  </Checkbox.Root>
+                ))}
+                {me.balances.giftCards.length === 0 && <Text fontSize="sm" color="gray.500">none on this account</Text>}
+              </Stack>
+            </Field.Root>
+            <Field.Root>{label("Card on file: Visa ····4242")}
+              <NativeSelect.Root><NativeSelect.Field bg="white" value={avs} onChange={(e) => setAvs(e.target.value as any)}><option value="pass">billing address matches</option><option value="fail">billing address mismatch (simulate AVS fail)</option></NativeSelect.Field><NativeSelect.Indicator /></NativeSelect.Root>
+            </Field.Root>
+          </Stack>
+        </Card>
+        <Card>
+          <Row k="Points" v={money(split.pts)} />
+          <Row k="Store credit" v={money(split.cr)} />
+          <Row k="Gift cards" v={money(split.gc)} />
+          <Row k="Card" v={money(split.card)} />
+          <Row k="Total" v={money(total)} bold />
+          {err && <Notice kind="err">{err}</Notice>}
+          <Button width="100%" mt="3" bg="warm.500" color="white" _hover={{ bg: "warm.600" }} disabled={busy || !cart.length || !addressId} onClick={pay}>{busy ? "Checking…" : `Pay ${money(total)}`}</Button>
+          <Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500" mt="2">Stored value is applied first; the card covers the rest.</Text>
+        </Card>
+      </SimpleGrid>
     </>
   );
 }

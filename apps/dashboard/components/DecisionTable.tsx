@@ -1,52 +1,54 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { Box, Button, Code, HStack, Table, Text } from "@chakra-ui/react";
 import type { Decision } from "@/lib/api";
 import { fmtTime } from "@/lib/api";
+import { ActionBadge } from "@/components/ui/badges";
 
 export function DecisionTable({ rows, newIds, showReview = false, onReview }: { rows: Decision[]; newIds?: Set<string>; showReview?: boolean; onReview?: (id: string, status: "true_positive" | "false_positive") => void }) {
   const router = useRouter();
-  if (!rows.length) return <div className="empty">Nothing yet.</div>;
+  if (!rows.length) return <Box p="8" textAlign="center" color="fg.muted">Nothing yet.</Box>;
   return (
-    <table className="table">
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Decision</th>
-          <th>Event</th>
-          <th>Customer</th>
-          <th>Score</th>
-          <th>Rules</th>
-          {showReview && <th></th>}
-        </tr>
-      </thead>
-      <tbody>
+    <Table.Root size="sm" interactive>
+      <Table.Header>
+        <Table.Row>
+          <Table.ColumnHeader>Time</Table.ColumnHeader>
+          <Table.ColumnHeader>Decision</Table.ColumnHeader>
+          <Table.ColumnHeader>Event</Table.ColumnHeader>
+          <Table.ColumnHeader>Customer</Table.ColumnHeader>
+          <Table.ColumnHeader>Score</Table.ColumnHeader>
+          <Table.ColumnHeader>Rules</Table.ColumnHeader>
+          {showReview && <Table.ColumnHeader />}
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
         {rows.map((d) => (
-          <tr key={d.id} className={`row ${newIds?.has(d.id) ? "newrow" : ""}`} onClick={() => router.push(`/alerts/${d.id}`)}>
-            <td className="mono muted">{fmtTime(d.occurredAt)}</td>
-            <td><span className={`badge ${d.action}`}>{d.action}</span></td>
-            <td className="mono">{d.eventType}</td>
-            <td className="mono">{d.customerId ?? ""}</td>
-            <td>{d.score}</td>
-            <td>
-              {d.firedRules.map((r) => (
-                <span key={r.ruleId} className="pill" style={{ marginRight: 4 }}>{r.ruleId}</span>
-              ))}
-            </td>
+          <Table.Row key={d.id} cursor="pointer" onClick={() => router.push(`/alerts/${d.id}`)} bg={newIds?.has(d.id) ? "teal.subtle" : undefined} transition="background 1.2s">
+            <Table.Cell><Text fontFamily="mono" fontSize="xs" color="fg.muted">{fmtTime(d.occurredAt)}</Text></Table.Cell>
+            <Table.Cell><ActionBadge action={d.action} /></Table.Cell>
+            <Table.Cell><Code size="sm">{d.eventType}</Code></Table.Cell>
+            <Table.Cell><Code size="sm" variant="plain">{d.customerId ?? ""}</Code></Table.Cell>
+            <Table.Cell>{d.score}</Table.Cell>
+            <Table.Cell>
+              <HStack gap="1" flexWrap="wrap">
+                {d.firedRules.map((r) => <Code key={r.ruleId} size="xs">{r.ruleId}</Code>)}
+              </HStack>
+            </Table.Cell>
             {showReview && (
-              <td onClick={(e) => e.stopPropagation()}>
+              <Table.Cell onClick={(e) => e.stopPropagation()}>
                 {d.reviewStatus ? (
-                  <span className="muted">{d.reviewStatus.replace("_", " ")}</span>
+                  <Text color="fg.muted" fontSize="sm">{d.reviewStatus.replace("_", " ")}</Text>
                 ) : (
-                  <div className="row-actions">
-                    <button className="btn" onClick={() => onReview?.(d.id, "true_positive")}>Fraud</button>
-                    <button className="btn" onClick={() => onReview?.(d.id, "false_positive")}>Legit</button>
-                  </div>
+                  <HStack gap="2">
+                    <Button size="xs" variant="outline" onClick={() => onReview?.(d.id, "true_positive")}>Fraud</Button>
+                    <Button size="xs" variant="outline" onClick={() => onReview?.(d.id, "false_positive")}>Legit</Button>
+                  </HStack>
                 )}
-              </td>
+              </Table.Cell>
             )}
-          </tr>
+          </Table.Row>
         ))}
-      </tbody>
-    </table>
+      </Table.Body>
+    </Table.Root>
   );
 }

@@ -120,7 +120,7 @@ Two browser windows: the dashboard (merchant) and the storefront (customer). The
 2. Storefront, normal window: log in as Sam, buy cheese and bread with a few points. Feed shows allow
 3. Storefront, incognito window: set the network picker in the header to "NG via VPN". Forgot password for `dana@example.com`. Open the Inbox link (Mailpit), click the reset link, set a new password. Feed shows reset and new device
 4. Same incognito window, second tab: log in as `jj.quick@example.com`, send USD 150 credit to Dana. Feed shows block on the transfer
-5. Back on Dana's tab: add a new address, cart, "load the wine order", checkout. Stored value covers most of the USD 403; leave about USD 20 on the card. Checkout returns the block screen
+5. Back on Dana's tab: add a new address, cart, "load the wine order", checkout. Stored value covers most of the USD 403; the card covers the rest (about USD 20 if you set credit to 165). Checkout returns the block screen
 6. Dashboard: open the alert. Walk the fired rules and the timeline, which shows every step from the burner device. Then Rules: raise the `redeem_after_reset` stored-value threshold and watch the counts change across the whole history
 
 Before the real run: Demo control, "Reset Ledger Guard", replay the baseline again, "Reset merchant". This makes Dana dormant again and clears rehearsal noise from the timeline.

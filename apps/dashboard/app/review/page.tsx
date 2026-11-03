@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Box, Button, Heading, HStack, Text } from "@chakra-ui/react";
 import { get, post, STORE, type Decision } from "@/lib/api";
 import { DecisionTable } from "@/components/DecisionTable";
 
@@ -14,19 +15,19 @@ export default function ReviewQueue() {
 
   return (
     <>
-      <div className="flex">
-        <h1>Review queue</h1>
-        <div className="sp" />
-        <div className="filters">
+      <HStack mb="1">
+        <Heading size="lg">Review queue</Heading>
+        <Box flex="1" />
+        <HStack gap="2">
           {(["open", "reviewed", "all"] as const).map((f) => (
-            <button key={f} className={`btn ${status === f ? "primary" : ""}`} onClick={() => setStatus(f)}>{f}</button>
+            <Button key={f} size="sm" variant={status === f ? "solid" : "outline"} colorPalette={status === f ? "teal" : undefined} onClick={() => setStatus(f)}>{f}</Button>
           ))}
-        </div>
-      </div>
-      <p className="sub">Blocked and review decisions. Mark each one fraud or legitimate; the rules screen uses these to show precision.</p>
-      <div className="panel">
+        </HStack>
+      </HStack>
+      <Text color="fg.muted" mb="5">Blocked and review decisions. Mark each one fraud or legitimate; the rules screen uses these to show precision.</Text>
+      <Box borderWidth="1px" rounded="lg" bg="bg.panel" overflow="hidden">
         <DecisionTable rows={rows} showReview onReview={review} />
-      </div>
+      </Box>
     </>
   );
 }

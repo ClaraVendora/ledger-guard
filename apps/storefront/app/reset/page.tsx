@@ -1,7 +1,9 @@
 "use client";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Box, Button } from "@chakra-ui/react";
 import { api, setToken } from "@/lib/api";
+import { PageTitle, Notice, TextField } from "@/components/ui/bits";
 
 function ResetForm() {
   const token = useSearchParams().get("token") ?? "";
@@ -16,20 +18,19 @@ function ResetForm() {
     } catch (ex: any) { setErr(ex.message); }
   };
   return (
-    <form onSubmit={submit} className="form">
-      <label className="field">New password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
-      {err && <div className="alert err" style={{ marginBottom: 12 }}>{err}</div>}
-      <button className="btn">Set password and log in</button>
+    <form onSubmit={submit}>
+      <TextField label="New password" type="password" value={password} onChange={setPassword} />
+      {err && <Notice kind="err">{err}</Notice>}
+      <Button type="submit" bg="brand.500" color="white" _hover={{ bg: "brand.600" }}>Set password and log in</Button>
     </form>
   );
 }
 
 export default function Reset() {
   return (
-    <>
-      <h1>Choose a new password</h1>
-      <p className="sub">You will be logged in on this device afterwards.</p>
+    <Box maxW="420px">
+      <PageTitle title="Choose a new password" sub="You will be logged in on this device afterwards." />
       <Suspense><ResetForm /></Suspense>
-    </>
+    </Box>
   );
 }

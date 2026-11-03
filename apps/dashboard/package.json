@@ -9,8 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.37.0",
+    "@emotion/react": "^11.14.0",
     "@lg/events": "workspace:*",
     "next": "^15.0.3",
+    "next-themes": "^0.4.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

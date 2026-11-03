@@ -1,18 +1,28 @@
 "use client";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { get, STORE, fmtTime, describeEvent, money, type Decision, type TimelineEvent } from "@/lib/api";
+import { Box, Code, Heading, Link, SimpleGrid, Stack, Table, Text } from "@chakra-ui/react";
+import { get, STORE, fmtTime, money, type Decision, type TimelineEvent } from "@/lib/api";
+import { ActionBadge } from "@/components/ui/badges";
+import { Stat } from "@/components/Stat";
+import { Timeline } from "@/components/Timeline";
 
 type Account = { customerId: string; events: TimelineEvent[]; alerts: Decision[]; devices: { device_id: string; n: number; last_seen: string }[] };
+
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <Box>
+    <Heading size="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wider" mb="2">{title}</Heading>
+    <Box borderWidth="1px" rounded="lg" bg="bg.panel" overflow="hidden">{children}</Box>
+  </Box>
+);
 
 export default function AccountView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [a, setA] = useState<Account | null>(null);
   const router = useRouter();
   useEffect(() => { get<Account>(`/accounts/${id}?store=${STORE}`).then(setA); }, [id]);
-  if (!a) return <div className="empty">Loading…</div>;
+  if (!a) return <Text color="fg.muted">Loading…</Text>;
 
-  // balances reconstructed from ledger events the engine has seen
   const bal = { points: 0, credit: 0, giftCards: 0 };
   for (const e of [...a.events].reverse()) {
     const p = e.payload;
@@ -23,55 +33,46 @@ export default function AccountView({ params }: { params: Promise<{ id: string }
   }
   const transfers = a.events.filter((e) => e.type === "value.transfer");
   const orders = a.events.filter((e) => e.type === "order.created");
+  const openAlerts = a.alerts.filter((x) => !x.reviewStatus).length;
 
   return (
     <>
-      <h1>Account <span className="mono">{id}</span></h1>
-      <p className="sub">{orders.length} orders seen · {a.devices.length} devices · {a.alerts.length} alerts</p>
-      <div className="stats">
-        <div className="panel stat"><div className="k">Points (seen)</div><div className="v">{bal.points.toFixed(0)}</div></div>
-        <div className="panel stat"><div className="k">Store credit (seen)</div><div className="v">{money(bal.credit)}</div></div>
-        <div className="panel stat"><div className="k">Gift cards (seen)</div><div className="v">{money(Math.max(0, bal.giftCards))}</div></div>
-        <div className="panel stat"><div className="k">Open alerts</div><div className="v" style={{ color: a.alerts.some((x) => !x.reviewStatus) ? "var(--block)" : undefined }}>{a.alerts.filter((x) => !x.reviewStatus).length}</div></div>
-      </div>
-      <div className="grid2">
-        <div>
-          <h2>Devices</h2>
-          <div className="panel">
-            <table className="table"><thead><tr><th>Device</th><th>Events</th><th>Last seen</th></tr></thead><tbody>
-              {a.devices.map((d) => <tr key={d.device_id}><td className="mono">{d.device_id}</td><td>{d.n}</td><td className="mono muted">{fmtTime(d.last_seen)}</td></tr>)}
-            </tbody></table>
-          </div>
-          <h2>Transfers</h2>
-          <div className="panel">
-            {transfers.length === 0 ? <div className="empty">None</div> : (
-              <table className="table"><thead><tr><th>Time</th><th>Direction</th><th>Amount</th><th>Counterparty</th></tr></thead><tbody>
-                {transfers.map((e) => { const p = e.payload; const inbound = p.toCustomerId === id; return (
-                  <tr key={e.id}><td className="mono muted">{fmtTime(e.occurred_at)}</td><td>{inbound ? "in" : "out"}</td><td>{money(p.amount)} {p.kind}</td><td className="mono"><a href={`/accounts/${inbound ? p.customerId : p.toCustomerId}`}>{inbound ? p.customerId : p.toCustomerId}</a></td></tr>
+      <Heading size="lg" mb="1">Account <Code size="md">{id}</Code></Heading>
+      <Text color="fg.muted" mb="5">{orders.length} orders seen · {a.devices.length} devices · {a.alerts.length} alerts</Text>
+      <SimpleGrid columns={4} gap="3" mb="5">
+        <Stat label="Points (seen)" value={bal.points.toFixed(0)} />
+        <Stat label="Store credit (seen)" value={money(bal.credit)} />
+        <Stat label="Gift cards (seen)" value={money(Math.max(0, bal.giftCards))} />
+        <Stat label="Open alerts" value={openAlerts} color={openAlerts ? "block" : undefined} />
+      </SimpleGrid>
+      <SimpleGrid columns={2} gap="4">
+        <Stack gap="4">
+          <Section title="Devices">
+            <Table.Root size="sm"><Table.Header><Table.Row><Table.ColumnHeader>Device</Table.ColumnHeader><Table.ColumnHeader>Events</Table.ColumnHeader><Table.ColumnHeader>Last seen</Table.ColumnHeader></Table.Row></Table.Header><Table.Body>
+              {a.devices.map((d) => <Table.Row key={d.device_id}><Table.Cell><Code size="sm">{d.device_id}</Code></Table.Cell><Table.Cell>{d.n}</Table.Cell><Table.Cell><Text fontFamily="mono" fontSize="xs" color="fg.muted">{fmtTime(d.last_seen)}</Text></Table.Cell></Table.Row>)}
+            </Table.Body></Table.Root>
+          </Section>
+          <Section title="Transfers">
+            {transfers.length === 0 ? <Box p="6" color="fg.muted" textAlign="center">None</Box> : (
+              <Table.Root size="sm"><Table.Header><Table.Row><Table.ColumnHeader>Time</Table.ColumnHeader><Table.ColumnHeader>Direction</Table.ColumnHeader><Table.ColumnHeader>Amount</Table.ColumnHeader><Table.ColumnHeader>Counterparty</Table.ColumnHeader></Table.Row></Table.Header><Table.Body>
+                {transfers.map((e) => { const p = e.payload; const inbound = p.toCustomerId === id; const other = inbound ? p.customerId : p.toCustomerId; return (
+                  <Table.Row key={e.id}><Table.Cell><Text fontFamily="mono" fontSize="xs" color="fg.muted">{fmtTime(e.occurred_at)}</Text></Table.Cell><Table.Cell>{inbound ? "in" : "out"}</Table.Cell><Table.Cell>{money(p.amount)} {p.kind}</Table.Cell><Table.Cell><Link href={`/accounts/${other}`} fontFamily="mono" fontSize="sm">{other}</Link></Table.Cell></Table.Row>
                 ); })}
-              </tbody></table>
+              </Table.Body></Table.Root>
             )}
-          </div>
-          <h2>Alerts</h2>
-          <div className="panel">
-            {a.alerts.length === 0 ? <div className="empty">None</div> : (
-              <table className="table"><tbody>
-                {a.alerts.map((d) => <tr key={d.id} className="row" onClick={() => router.push(`/alerts/${d.id}`)}><td className="mono muted">{fmtTime(d.occurredAt)}</td><td><span className={`badge ${d.action}`}>{d.action}</span></td><td className="mono">{d.eventType}</td><td>{d.score}</td></tr>)}
-              </tbody></table>
+          </Section>
+          <Section title="Alerts">
+            {a.alerts.length === 0 ? <Box p="6" color="fg.muted" textAlign="center">None</Box> : (
+              <Table.Root size="sm" interactive><Table.Body>
+                {a.alerts.map((d) => <Table.Row key={d.id} cursor="pointer" onClick={() => router.push(`/alerts/${d.id}`)}><Table.Cell><Text fontFamily="mono" fontSize="xs" color="fg.muted">{fmtTime(d.occurredAt)}</Text></Table.Cell><Table.Cell><ActionBadge action={d.action} /></Table.Cell><Table.Cell><Code size="sm">{d.eventType}</Code></Table.Cell><Table.Cell>{d.score}</Table.Cell></Table.Row>)}
+              </Table.Body></Table.Root>
             )}
-          </div>
-        </div>
-        <div>
-          <h2>Recent activity</h2>
-          <div className="panel" style={{ padding: "12px 16px", maxHeight: 720, overflow: "auto" }}>
-            <ul className="timeline">
-              {a.events.slice(0, 80).map((e) => (
-                <li key={e.id}><div className="mono muted" style={{ fontSize: 11 }}>{fmtTime(e.occurred_at)} {e.payload.deviceId && <span className="pill" style={{ marginLeft: 6 }}>{e.payload.deviceId}</span>}</div><div>{describeEvent(e)}</div></li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+          </Section>
+        </Stack>
+        <Section title="Recent activity">
+          <Box p="4" maxH="760px" overflow="auto"><Timeline events={a.events.slice(0, 80)} /></Box>
+        </Section>
+      </SimpleGrid>
     </>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { Box, Button, Code, Heading, HStack, List, Text } from "@chakra-ui/react";
 import { get, post, LG, MERCHANT, STORE } from "@/lib/api";
+import { ActionBadge } from "@/components/ui/badges";
 
 export default function Admin() {
   const [log, setLog] = useState<string[]>([]);
@@ -14,33 +16,35 @@ export default function Admin() {
     setBusy(false);
   };
 
+  const H = ({ children }: { children: string }) => <Heading size="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wider" mt="6" mb="2">{children}</Heading>;
+
   return (
     <>
-      <h1>Demo control</h1>
-      <p className="sub">Reset state between rehearsals. The baseline replay runs from the terminal (<span className="mono">pnpm data:replay -- --reset</span>) because it streams tens of thousands of events.</p>
-      <div className="panel" style={{ padding: 16 }}>
-        <div className="flex" style={{ flexWrap: "wrap" }}>
-          <button className="btn" disabled={busy} onClick={() => run("Health", async () => ({ engine: await get("/health"), merchant: await get("/health", MERCHANT) }))}>Check health</button>
-          <button className="btn" disabled={busy} onClick={() => run("Reset merchant and seed demo accounts", () => post("/admin/reset", { seed: true, resetLedgerGuard: false }, MERCHANT))}>Reset merchant (keep baseline)</button>
-          <button className="btn" disabled={busy} onClick={() => run("Recompute store stats", () => post("/admin/recompute-stats", { store: STORE }))}>Recompute store p95s</button>
-          <button className="btn" disabled={busy} onClick={() => run("Reload rule pack", () => post("/admin/reload-rules", {}))}>Reload rules from YAML</button>
-          <button className="btn danger" disabled={busy} onClick={() => { if (confirm("Wipe Ledger Guard history for this store? You will need to replay the baseline.")) run("Reset Ledger Guard", () => post("/admin/reset", { store: STORE })); }}>Reset Ledger Guard (wipe history)</button>
-        </div>
-        <div className="muted" style={{ marginTop: 12, fontSize: 12 }}>Engine {LG} · Merchant {MERCHANT} · Store {STORE}</div>
-      </div>
-      <h2>Run script</h2>
-      <div className="panel" style={{ padding: 16 }}>
-        <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.9 }}>
-          <li>Reset merchant (keep baseline). Open the live feed in this window.</li>
-          <li>Storefront, second window: log in as <span className="mono">sam@example.com</span>, buy cheese and bread with a few points. Feed shows <span className="badge allow">allow</span>.</li>
-          <li>Storefront, incognito: Forgot password for <span className="mono">dana@example.com</span>. Open the email (or /outbox), set a new password. Feed shows reset and new device.</li>
-          <li>Still incognito, second tab: log in as <span className="mono">jj.quick@example.com</span>, transfer $150 credit to Dana. Feed shows <span className="badge block">block</span> on the transfer.</li>
-          <li>As Dana: add a new address, cart three Barolo, two mezcal, one wagyu, pay with points, credit and the gift card, leave about $20 on the card. Checkout returns the block screen.</li>
-          <li>Here: open the alert, walk the three rules and the timeline. Then Rules: raise <span className="mono">redeem_after_reset</span> stored-value share to 1.0 and watch the counts change.</li>
-        </ol>
-      </div>
-      <h2>Log</h2>
-      <div className="log">{log.join("\n") || "—"}</div>
+      <Heading size="lg" mb="1">Demo control</Heading>
+      <Text color="fg.muted" mb="5">Reset state between rehearsals. The baseline replay runs from the terminal (<Code size="sm">pnpm data:replay -- --reset</Code>) because it streams tens of thousands of events.</Text>
+      <Box borderWidth="1px" rounded="lg" bg="bg.panel" p="4">
+        <HStack gap="2" flexWrap="wrap">
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Health", async () => ({ engine: await get("/health"), merchant: await get("/health", MERCHANT) }))}>Check health</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Reset merchant and seed demo accounts", () => post("/admin/reset", { seed: true, resetLedgerGuard: false }, MERCHANT))}>Reset merchant (keep baseline)</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Recompute store stats", () => post("/admin/recompute-stats", { store: STORE }))}>Recompute store p95s</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Reload rule pack", () => post("/admin/reload-rules", {}))}>Reload rules from YAML</Button>
+          <Button size="sm" variant="outline" colorPalette="red" disabled={busy} onClick={() => { if (confirm("Wipe Ledger Guard history for this store? You will need to replay the baseline.")) run("Reset Ledger Guard", () => post("/admin/reset", { store: STORE })); }}>Reset Ledger Guard (wipe history)</Button>
+        </HStack>
+        <Text color="fg.muted" fontSize="xs" mt="3">Engine {LG} · Merchant {MERCHANT} · Store {STORE}</Text>
+      </Box>
+      <H>Run script</H>
+      <Box borderWidth="1px" rounded="lg" bg="bg.panel" p="4">
+        <List.Root as="ol" gap="2" pl="4">
+          <List.Item>Reset merchant (keep baseline). Open the live feed in this window.</List.Item>
+          <List.Item>Storefront, second window: log in as <Code size="sm">sam@example.com</Code>, buy cheese and bread with a few points. Feed shows <ActionBadge action="allow" />.</List.Item>
+          <List.Item>Storefront, incognito: set the network picker to NG via VPN. Forgot password for <Code size="sm">dana@example.com</Code>. Open the Inbox, click the reset link, set a new password. Feed shows reset and new device.</List.Item>
+          <List.Item>Still incognito, second tab: log in as <Code size="sm">jj.quick@example.com</Code>, transfer $150 credit to Dana. Feed shows <ActionBadge action="block" /> on the transfer.</List.Item>
+          <List.Item>As Dana: add a new address, cart, load the wine order, pay with points and credit, leave about $20 on the card. Checkout returns the block screen.</List.Item>
+          <List.Item>Here: open the alert, walk the rules and the timeline. Then Rules: raise <Code size="sm">redeem_after_reset</Code> stored-value share and watch the counts change.</List.Item>
+        </List.Root>
+      </Box>
+      <H>Log</H>
+      <Box as="pre" fontFamily="mono" fontSize="xs" bg="bg.emphasized" p="3" rounded="md" whiteSpace="pre-wrap" maxH="320px" overflow="auto">{log.join("\n") || "—"}</Box>
     </>
   );
 }
