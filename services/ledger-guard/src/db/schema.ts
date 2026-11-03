@@ -1,4 +1,8 @@
-import { pgTable, text, timestamp, jsonb, integer, real, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgSchema, text, timestamp, jsonb, integer, real, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
+
+/** Own schema so Ledger Guard can share one Postgres with the merchant without colliding. */
+export const lg = pgSchema("ledger_guard");
+const pgTable = lg.table;
 
 /** Append-only event store. The payload is the common event model, verbatim. */
 export const events = pgTable(

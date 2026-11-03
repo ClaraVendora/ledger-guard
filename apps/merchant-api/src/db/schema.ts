@@ -1,4 +1,8 @@
-import { pgTable, text, timestamp, real, boolean, jsonb, integer, index } from "drizzle-orm/pg-core";
+import { pgSchema, text, timestamp, real, boolean, jsonb, integer, index } from "drizzle-orm/pg-core";
+
+/** Own schema so the merchant can share one Postgres with Ledger Guard without colliding. */
+export const merchant = pgSchema("merchant");
+const pgTable = merchant.table;
 
 export const customers = pgTable("customers", {
   id: text("id").primaryKey(),

@@ -102,7 +102,7 @@ app.get("/alerts/:id", async (req, reply) => {
   const at = d.occurredAt;
   const timeline = d.customerId
     ? await sql`
-        select id, type, occurred_at, payload from events
+        select id, type, occurred_at, payload from ledger_guard.events
         where store_id = ${d.storeId} and (
           customer_id = ${d.customerId}
           or (type = 'value.transfer' and payload->>'toCustomerId' = ${d.customerId})
@@ -125,12 +125,12 @@ app.get("/accounts/:customerId", async (req) => {
   const { customerId } = req.params as { customerId: string };
   const q = z.object({ store: z.string() }).parse(req.query);
   const recent = await sql`
-    select id, type, occurred_at, payload from events
+    select id, type, occurred_at, payload from ledger_guard.events
     where store_id = ${q.store} and (customer_id = ${customerId} or (type='value.transfer' and payload->>'toCustomerId' = ${customerId}))
     order by occurred_at desc limit 200`;
   const alerts = await db.select().from(decisions).where(and(eq(decisions.storeId, q.store), eq(decisions.customerId, customerId), ne(decisions.action, "allow"))).orderBy(desc(decisions.occurredAt));
   const devices = await sql`
-    select device_id, count(*)::int as n, max(occurred_at) as last_seen from events
+    select device_id, count(*)::int as n, max(occurred_at) as last_seen from ledger_guard.events
     where store_id = ${q.store} and customer_id = ${customerId} and device_id is not null group by device_id order by last_seen desc`;
   return { customerId, events: recent, alerts, devices };
 });
@@ -142,7 +142,7 @@ app.get("/rules", async (req) => {
   const stats = await getStoreStats(q.store);
   const counts = await sql<{ rule_id: string; n: number }[]>`
     select r->>'ruleId' as rule_id, count(*)::int as n
-    from decisions, jsonb_array_elements(fired_rules) r
+    from ledger_guard.decisions, jsonb_array_elements(fired_rules) r
     where store_id = ${q.store} group by 1`;
   const countMap = Object.fromEntries(counts.map((c) => [c.rule_id, c.n]));
   return {

@@ -13,7 +13,7 @@ export async function recomputeStoreStats(storeId: string) {
         coalesce(sum((payload->>'amount')::float) filter (where type = 'refund.created'), 0) as refund_amount,
         coalesce(sum((payload->>'total')::float) filter (where type = 'order.created'), 0) as order_amount,
         count(*) filter (where type = 'refund.created') as refund_count
-      from events
+      from ledger_guard.events
       where store_id = ${storeId} and customer_id is not null
         and occurred_at >= now() - interval '90 days'
       group by customer_id
@@ -22,7 +22,7 @@ export async function recomputeStoreStats(storeId: string) {
       select coalesce((
         select sum((t->>'amount')::float) from jsonb_array_elements(payload->'tenders') t where t->>'kind' <> 'card'
       ),0) / nullif((payload->>'total')::float,0) as share
-      from events where store_id = ${storeId} and type = 'order.created'
+      from ledger_guard.events where store_id = ${storeId} and type = 'order.created'
     )
     select
       (select percentile_cont(0.95) within group (order by case when order_amount > 0 then refund_amount / order_amount else 0 end) from per_customer) as p95_ratio,

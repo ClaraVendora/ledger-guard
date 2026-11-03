@@ -50,7 +50,7 @@ export async function seedMerchant() {
 export async function adminRoutes(app: FastifyInstance) {
   app.post("/admin/reset", async (req) => {
     const b = z.object({ seed: z.boolean().default(true), resetLedgerGuard: z.boolean().default(true) }).parse(req.body ?? {});
-    await sql`truncate customers, devices, addresses, sessions, password_resets, ledger_entries, gift_cards, products, orders, refunds, outbox, counters`;
+    await sql`truncate merchant.customers, merchant.devices, merchant.addresses, merchant.sessions, merchant.password_resets, merchant.ledger_entries, merchant.gift_cards, merchant.products, merchant.orders, merchant.refunds, merchant.outbox, merchant.counters`;
     if (b.resetLedgerGuard) {
       await fetch(`${process.env.LEDGER_GUARD_URL ?? "http://localhost:4100"}/admin/reset`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ store: STORE_ID }) }).catch(() => null);
     }

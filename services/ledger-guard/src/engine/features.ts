@@ -20,7 +20,7 @@ const hoursSince = (from: Date | null, to: Date) => (from ? (to.getTime() - from
 
 async function lastEventAt(storeId: string, customerId: string, types: string[], before: Date): Promise<Date | null> {
   const rows = await sql<{ t: Date }[]>`
-    select max(occurred_at) as t from events
+    select max(occurred_at) as t from ledger_guard.events
     where store_id = ${storeId} and customer_id = ${customerId}
       and type = any(${types}) and occurred_at < ${before}`;
   return rows[0]?.t ?? null;
@@ -28,14 +28,14 @@ async function lastEventAt(storeId: string, customerId: string, types: string[],
 
 async function countSince(storeId: string, where: ReturnType<typeof sql>, since: Date, before: Date): Promise<number> {
   const rows = await sql<{ n: number }[]>`
-    select count(*)::int as n from events
+    select count(*)::int as n from ledger_guard.events
     where store_id = ${storeId} and occurred_at >= ${since} and occurred_at <= ${before} and ${where}`;
   return rows[0]?.n ?? 0;
 }
 
 async function customerFirstSeen(storeId: string, customerId: string): Promise<Date | null> {
   const rows = await sql<{ t: Date }[]>`
-    select min(occurred_at) as t from events where store_id = ${storeId} and customer_id = ${customerId}`;
+    select min(occurred_at) as t from ledger_guard.events where store_id = ${storeId} and customer_id = ${customerId}`;
   return rows[0]?.t ?? null;
 }
 
@@ -61,7 +61,7 @@ async function customerFeatures(e: Event, at: Date): Promise<Features> {
 
   // transfers in, last 24h
   const tin = await sql<{ amount: number; n: number }[]>`
-    select coalesce(sum((payload->>'amount')::float),0) as amount, count(*)::int as n from events
+    select coalesce(sum((payload->>'amount')::float),0) as amount, count(*)::int as n from ledger_guard.events
     where store_id = ${storeId} and type = 'value.transfer'
       and payload->>'toCustomerId' = ${customerId}
       and occurred_at >= ${new Date(at.getTime() - DAY)} and occurred_at < ${at}`;
@@ -70,7 +70,7 @@ async function customerFeatures(e: Event, at: Date): Promise<Features> {
 
   // youngest counterparty that transferred in, last 7d
   const cp = await sql<{ customer_id: string }[]>`
-    select distinct customer_id from events
+    select distinct customer_id from ledger_guard.events
     where store_id = ${storeId} and type = 'value.transfer'
       and payload->>'toCustomerId' = ${customerId}
       and occurred_at >= ${new Date(at.getTime() - 7 * DAY)} and occurred_at < ${at}`;
@@ -81,11 +81,11 @@ async function customerFeatures(e: Event, at: Date): Promise<Features> {
   // refunds last 90d and refund value ratio
   const since90 = new Date(at.getTime() - 90 * DAY);
   const ref = await sql<{ n: number; amount: number }[]>`
-    select count(*)::int as n, coalesce(sum((payload->>'amount')::float),0) as amount from events
+    select count(*)::int as n, coalesce(sum((payload->>'amount')::float),0) as amount from ledger_guard.events
     where store_id = ${storeId} and customer_id = ${customerId} and type = 'refund.created'
       and occurred_at >= ${since90} and occurred_at < ${at}`;
   const ord = await sql<{ amount: number }[]>`
-    select coalesce(sum((payload->>'total')::float),0) as amount from events
+    select coalesce(sum((payload->>'total')::float),0) as amount from ledger_guard.events
     where store_id = ${storeId} and customer_id = ${customerId} and type = 'order.created'
       and occurred_at >= ${since90} and occurred_at < ${at}`;
   f.refunds_90d_count = ref[0]?.n ?? 0;
@@ -93,7 +93,7 @@ async function customerFeatures(e: Event, at: Date): Promise<Features> {
 
   // credit issued from refund claims, last 24h, and minutes since last issue
   const lastIssue = await sql<{ t: Date; reason: string; amount: number }[]>`
-    select occurred_at as t, payload->>'reason' as reason, (payload->>'amount')::float as amount from events
+    select occurred_at as t, payload->>'reason' as reason, (payload->>'amount')::float as amount from ledger_guard.events
     where store_id = ${storeId} and customer_id = ${customerId} and type = 'value.issue'
       and occurred_at < ${at} order by occurred_at desc limit 1`;
   f.minutes_since_last_issue = lastIssue[0] ? (at.getTime() - lastIssue[0].t.getTime()) / 60_000 : far;
@@ -107,7 +107,7 @@ async function customerFeatures(e: Event, at: Date): Promise<Features> {
 
   // loads: distinct cards last 7d, hours since last load
   const loads = await sql<{ cards: number; last: Date | null }[]>`
-    select count(distinct payload->>'cardFingerprint')::int as cards, max(occurred_at) as last from events
+    select count(distinct payload->>'cardFingerprint')::int as cards, max(occurred_at) as last from ledger_guard.events
     where store_id = ${storeId} and customer_id = ${customerId} and type = 'value.load'
       and occurred_at >= ${new Date(at.getTime() - 7 * DAY)} and occurred_at < ${at}`;
   f.load_distinct_cards_7d = loads[0]?.cards ?? 0;
@@ -119,7 +119,7 @@ async function customerFeatures(e: Event, at: Date): Promise<Features> {
       select coalesce((
         select sum((t->>'amount')::float) from jsonb_array_elements(payload->'tenders') t where t->>'kind' <> 'card'
       ),0) / nullif((payload->>'total')::float,0) as share
-      from events
+      from ledger_guard.events
       where store_id = ${storeId} and customer_id = ${customerId} and type = 'order.created' and occurred_at < ${at}
     ) sv`;
   f.hist_stored_value_share = hist[0]?.share ?? 0;
@@ -127,7 +127,7 @@ async function customerFeatures(e: Event, at: Date): Promise<Features> {
 
   // refund of a card-paid order pushed to stored value, then any transfer out within 24h of that refund
   const refSv = await sql<{ t: Date }[]>`
-    select occurred_at as t from events
+    select occurred_at as t from ledger_guard.events
     where store_id = ${storeId} and customer_id = ${customerId} and type = 'refund.created'
       and payload->>'destination' in ('credit','gift_card','points')
       and occurred_at >= ${new Date(at.getTime() - DAY)} and occurred_at < ${at}
@@ -146,7 +146,7 @@ async function geoFeatures(e: Event, at: Date): Promise<Features> {
   // the customer's usual country: most frequent across their past orders. Orders only, because an
   // attacker's own logins minutes earlier must not count, and a dormant account's orders sit outside any rolling window.
   const rows = await sql<{ c: string; n: number }[]>`
-    select ip_country as c, count(*)::int as n from events
+    select ip_country as c, count(*)::int as n from ledger_guard.events
     where store_id = ${e.storeId} and customer_id = ${e.customerId} and ip_country is not null
       and type = 'order.created' and occurred_at < ${at}
     group by ip_country order by n desc limit 1`;
@@ -160,14 +160,14 @@ async function deviceFeatures(e: Event, at: Date): Promise<Features> {
   const since30 = new Date(at.getTime() - 30 * DAY);
   if (e.deviceId) {
     const d = await sql<{ n: number }[]>`
-      select count(distinct customer_id)::int as n from events
+      select count(distinct customer_id)::int as n from ledger_guard.events
       where store_id = ${e.storeId} and device_id = ${e.deviceId} and customer_id is not null
         and occurred_at >= ${since30} and occurred_at <= ${at}`;
     f.distinct_accounts_per_device_30d = d[0]?.n ?? 0;
 
     const checks = await sql<{ n: number; invalid: number }[]>`
       select count(*)::int as n, count(*) filter (where (payload->>'valid')::boolean = false)::int as invalid
-      from events
+      from ledger_guard.events
       where store_id = ${e.storeId} and device_id = ${e.deviceId} and type = 'giftcard.balance_check'
         and occurred_at >= ${new Date(at.getTime() - HOUR)} and occurred_at <= ${at}`;
     f.balance_checks_1h_device = checks[0]?.n ?? 0;
@@ -194,7 +194,7 @@ async function orderFeatures(e: OrderCreatedEvent, at: Date): Promise<Features> 
 
   // distinct accounts at this shipping address, 30d
   const a = await sql<{ n: number }[]>`
-    select count(distinct customer_id)::int as n from events
+    select count(distinct customer_id)::int as n from ledger_guard.events
     where store_id = ${e.storeId} and type = 'order.created'
       and payload->>'shippingAddressId' = ${e.shippingAddressId}
       and occurred_at >= ${new Date(at.getTime() - 30 * DAY)} and occurred_at < ${at}`;
@@ -205,7 +205,7 @@ async function orderFeatures(e: OrderCreatedEvent, at: Date): Promise<Features> 
   for (const t of e.tenders) {
     if (t.kind !== "gift_card" || !t.instrumentId) continue;
     const l = await sql<{ customer_id: string }[]>`
-      select customer_id from events
+      select customer_id from ledger_guard.events
       where store_id = ${e.storeId} and type = 'value.load' and payload->>'instrumentId' = ${t.instrumentId}
       order by occurred_at asc limit 1`;
     if (l[0] && l[0].customer_id !== e.customerId) foreign += 1;
