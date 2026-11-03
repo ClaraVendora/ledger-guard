@@ -1,14 +1,11 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "deploy/next.Dockerfile",
-    "buildArgs": {
-      "PKG": "@lg/storefront",
-      "DIR": "apps/storefront"
-    }
+    "builder": "RAILPACK",
+    "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @lg/storefront... build"
   },
   "deploy": {
+    "startCommand": "pnpm --filter @lg/storefront start",
     "restartPolicyType": "ON_FAILURE"
   }
 }

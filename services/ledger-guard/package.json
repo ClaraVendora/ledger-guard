@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json && mkdir -p dist/rules && cp src/rules/pack.yaml dist/rules/",
+    "build": "pnpm --filter @lg/events build && tsc -p tsconfig.json && mkdir -p dist/rules && cp src/rules/pack.yaml dist/rules/",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:push": "drizzle-kit push",

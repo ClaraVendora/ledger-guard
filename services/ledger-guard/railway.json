@@ -1,14 +1,12 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "deploy/node.Dockerfile",
-    "buildArgs": {
-      "PKG": "@lg/ledger-guard"
-    }
+    "builder": "RAILPACK",
+    "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @lg/ledger-guard... build"
   },
   "deploy": {
-    "healthcheckPath": "/health",
-    "restartPolicyType": "ON_FAILURE"
+    "startCommand": "pnpm --filter @lg/ledger-guard start:railway",
+    "restartPolicyType": "ON_FAILURE",
+    "healthcheckPath": "/health"
   }
 }

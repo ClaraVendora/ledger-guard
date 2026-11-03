@@ -1,14 +1,12 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "DOCKERFILE",
-    "dockerfilePath": "deploy/node.Dockerfile",
-    "buildArgs": {
-      "PKG": "@lg/merchant-api"
-    }
+    "builder": "RAILPACK",
+    "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @lg/merchant-api... build"
   },
   "deploy": {
-    "healthcheckPath": "/health",
-    "restartPolicyType": "ON_FAILURE"
+    "startCommand": "pnpm --filter @lg/merchant-api start:railway",
+    "restartPolicyType": "ON_FAILURE",
+    "healthcheckPath": "/health"
   }
 }
