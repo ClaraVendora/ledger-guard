@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, Heading, HStack, SimpleGrid, Text } from "@chakra-ui/react";
+import { Box, Button, Grid, GridItem, Heading, HStack, Text } from "@chakra-ui/react";
 import { get, STORE, type Decision } from "@/lib/api";
 import { DecisionTable } from "@/components/DecisionTable";
 import { Stat } from "@/components/Stat";
@@ -36,23 +36,23 @@ export default function LiveFeed() {
     <>
       <HStack mb="1">
         <Heading size="lg">Live feed</Heading>
-        <Box w="8px" h="8px" rounded="full" bg="allow" ml="2" boxShadow="0 0 0 4px rgba(79,191,122,.25)" />
-        <Text color="fg.muted" fontSize="sm">polling every 2s</Text>
+        <Box w="8px" h="8px" rounded="full" bg="allow" ml="2" boxShadow="0 0 0 4px var(--chakra-colors-green-100)" />
+        <Text color="gray.500" fontSize="sm">polling every 2s</Text>
         <Box flex="1" />
         <HStack gap="2">
           {(["all", "review", "block"] as const).map((f) => (
-            <Button key={f} size="sm" variant={filter === f ? "solid" : "outline"} colorPalette={filter === f ? "teal" : undefined} onClick={() => setFilter(f)}>{f}</Button>
+            <Button key={f} size="sm" variant={filter === f ? "solid" : "outline"} colorPalette="gray" onClick={() => setFilter(f)}>{f}</Button>
           ))}
         </HStack>
       </HStack>
-      <Text color="fg.muted" mb="5">Every event the store sends, with Ledger Guard's decision. Click a row for the evidence.</Text>
-      <SimpleGrid columns={4} gap="3" mb="5">
-        <Stat label="Last 60 events" value={rows.length} />
-        <Stat label="Blocked" value={counts.block} color="block" />
-        <Stat label="For review" value={counts.review} color="review" />
-        <Stat label="Allowed" value={counts.allow} color="allow" />
-      </SimpleGrid>
-      <Box borderWidth="1px" rounded="lg" bg="bg.panel" overflow="hidden">
+      <Text color="gray.500" mb="5">Every event the store sends, with Ledger Guard's decision. Click a row for the evidence.</Text>
+      <Grid templateColumns="repeat(12, 1fr)" gap="3" mb="5">
+        <GridItem colSpan={{ base: 6, md: 3 }}><Stat label="Last 60 events" value={rows.length} /></GridItem>
+        <GridItem colSpan={{ base: 6, md: 3 }}><Stat label="Blocked" value={counts.block} color="block" /></GridItem>
+        <GridItem colSpan={{ base: 6, md: 3 }}><Stat label="For review" value={counts.review} color="review" /></GridItem>
+        <GridItem colSpan={{ base: 6, md: 3 }}><Stat label="Allowed" value={counts.allow} color="allow" /></GridItem>
+      </Grid>
+      <Box borderWidth="1px" borderColor="gray.200" rounded="md" bg="white" overflow="hidden">
         <DecisionTable rows={rows} newIds={newIds} />
       </Box>
     </>

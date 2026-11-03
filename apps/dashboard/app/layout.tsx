@@ -1,21 +1,24 @@
 import type { ReactNode } from "react";
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Grid, GridItem } from "@chakra-ui/react";
 import { Provider } from "@/components/ui/provider";
 import { Nav } from "./nav";
 
 export const metadata = { title: "Ledger Guard", description: "Stored-value fraud and abuse monitor" };
 
+// 12-column grid: sidebar takes 2 columns, content takes 10.
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
         <Provider>
-          <Flex minH="100vh">
-            <Box as="aside" w="220px" borderRightWidth="1px" p="5" position="sticky" top="0" h="100vh" flexShrink={0}>
+          <Grid templateColumns="repeat(12, 1fr)" minH="100vh">
+            <GridItem colSpan={{ base: 12, md: 2 }} as="aside" borderRightWidth={{ md: "1px" }} borderBottomWidth={{ base: "1px", md: 0 }} borderColor="gray.200" p="5" position={{ md: "sticky" }} top="0" h={{ md: "100vh" }}>
               <Nav />
-            </Box>
-            <Box as="main" flex="1" p="8" maxW="1240px">{children}</Box>
-          </Flex>
+            </GridItem>
+            <GridItem colSpan={{ base: 12, md: 10 }} as="main" p={{ base: 4, md: 8 }}>
+              <Box maxW="1280px">{children}</Box>
+            </GridItem>
+          </Grid>
         </Provider>
       </body>
     </html>

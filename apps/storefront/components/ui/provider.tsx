@@ -1,21 +1,20 @@
 "use client";
 import { ChakraProvider, createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
-import { ThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
 
+// Neutral theme: white background, gray scale, black text.
+// Accents are Chakra's standard palettes only: red (block), green (allow), blue (review, links).
 const config = defineConfig({
   globalCss: {
-    body: { bg: "#faf7f2", color: "#1f1a17" },
+    html: { colorScheme: "light" },
+    body: { bg: "white", color: "gray.900" },
   },
   theme: {
-    tokens: {
-      fonts: {
-        heading: { value: "Georgia, 'Iowan Old Style', serif" },
-        body: { value: "Georgia, 'Iowan Old Style', serif" },
-      },
+    semanticTokens: {
       colors: {
-        brand: { 500: { value: "#2f5d3a" }, 600: { value: "#264b2f" } },
-        warm: { 500: { value: "#b4552a" }, 600: { value: "#95461f" } },
+        allow: { value: "{colors.green.600}" },
+        review: { value: "{colors.blue.600}" },
+        block: { value: "{colors.red.600}" },
       },
     },
   },
@@ -24,11 +23,5 @@ const config = defineConfig({
 export const system = createSystem(defaultConfig, config);
 
 export function Provider({ children }: { children: ReactNode }) {
-  return (
-    <ChakraProvider value={system}>
-      <ThemeProvider attribute="class" forcedTheme="light" disableTransitionOnChange>
-        {children}
-      </ThemeProvider>
-    </ChakraProvider>
-  );
+  return <ChakraProvider value={system}>{children}</ChakraProvider>;
 }

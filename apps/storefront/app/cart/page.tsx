@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Button, Input, Link, Table, Text } from "@chakra-ui/react";
+import { Button, Grid, GridItem, Input, Link, Table, Text } from "@chakra-ui/react";
 import { api, getCart, setCart, money, type Product, type CartItem } from "@/lib/api";
 import { Card, PageTitle } from "@/components/ui/bits";
 
@@ -13,9 +13,9 @@ export default function Cart() {
   const total = cart.reduce((a, i) => a + (products.find((p) => p.sku === i.sku)?.price ?? 0) * i.qty, 0);
   return (
     <>
-      <PageTitle title="Your cart" sub={<>{cart.length ? `${cart.reduce((a, i) => a + i.qty, 0)} items` : "Empty."} <Link onClick={preset} textDecoration="underline" cursor="pointer" fontFamily="system-ui, sans-serif" fontSize="sm">load the wine order</Link></>} />
-      <Card>
-        <Table.Root size="sm" fontFamily="system-ui, sans-serif">
+      <PageTitle title="Your cart" sub={<>{cart.length ? `${cart.reduce((a, i) => a + i.qty, 0)} items` : "Empty."} <Link onClick={preset} color="blue.600" cursor="pointer" fontSize="sm">load the wine order</Link></>} />
+      <Grid templateColumns="repeat(12, 1fr)"><GridItem colSpan={{ base: 12, md: 8 }}><Card>
+        <Table.Root size="sm">
           <Table.Body>
             {cart.map((i) => { const p = products.find((x) => x.sku === i.sku); return (
               <Table.Row key={i.sku}><Table.Cell>{p?.name ?? i.sku}</Table.Cell><Table.Cell><Input size="xs" type="number" min={0} width="64px" value={i.qty} onChange={(e) => update(i.sku, Number(e.target.value))} /></Table.Cell><Table.Cell textAlign="right">{money((p?.price ?? 0) * i.qty)}</Table.Cell></Table.Row>
@@ -23,8 +23,8 @@ export default function Cart() {
             <Table.Row><Table.Cell colSpan={2}><Text fontWeight="semibold">Total</Text></Table.Cell><Table.Cell textAlign="right"><Text fontWeight="semibold">{money(total)}</Text></Table.Cell></Table.Row>
           </Table.Body>
         </Table.Root>
-        <Button asChild mt="3" bg="brand.500" color="white" _hover={{ bg: "brand.600" }} size="sm"><a href="/checkout">Checkout</a></Button>
-      </Card>
+        <Button asChild mt="3" colorPalette="gray" variant="solid" size="sm"><a href="/checkout">Checkout</a></Button>
+      </Card></GridItem></Grid>
     </>
   );
 }

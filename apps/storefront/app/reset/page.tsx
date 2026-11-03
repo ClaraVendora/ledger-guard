@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Box, Button } from "@chakra-ui/react";
+import { Button, Grid, GridItem } from "@chakra-ui/react";
 import { api, setToken } from "@/lib/api";
 import { PageTitle, Notice, TextField } from "@/components/ui/bits";
 
@@ -21,16 +21,16 @@ function ResetForm() {
     <form onSubmit={submit}>
       <TextField label="New password" type="password" value={password} onChange={setPassword} />
       {err && <Notice kind="err">{err}</Notice>}
-      <Button type="submit" bg="brand.500" color="white" _hover={{ bg: "brand.600" }}>Set password and log in</Button>
+      <Button type="submit" colorPalette="gray" variant="solid">Set password and log in</Button>
     </form>
   );
 }
 
 export default function Reset() {
   return (
-    <Box maxW="420px">
+    <Grid templateColumns="repeat(12, 1fr)"><GridItem colSpan={{ base: 12, md: 5 }}>
       <PageTitle title="Choose a new password" sub="You will be logged in on this device afterwards." />
       <Suspense><ResetForm /></Suspense>
-    </Box>
+    </GridItem></Grid>
   );
 }

@@ -9,11 +9,11 @@ export default function Accounts() {
   return (
     <>
       <Heading size="lg" mb="1">Accounts</Heading>
-      <Text color="fg.muted" mb="5">Open a customer's stored-value activity and risk history. Demo accounts: cus_dana (victim), cus_mule (mule), cus_sam (control).</Text>
+      <Text color="gray.500" mb="5">Open a customer's stored-value activity and risk history. Demo accounts: cus_dana (victim), cus_mule (mule), cus_sam (control).</Text>
       <form onSubmit={(e) => { e.preventDefault(); router.push(`/accounts/${id}`); }}>
         <HStack maxW="420px">
           <Input fontFamily="mono" value={id} onChange={(e) => setId(e.target.value)} placeholder="customer id" />
-          <Button type="submit" colorPalette="teal">Open</Button>
+          <Button type="submit" colorPalette="gray">Open</Button>
         </HStack>
       </form>
     </>

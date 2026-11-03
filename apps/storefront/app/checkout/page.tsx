@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Box, Button, Checkbox, Field, Heading, HStack, Link, NativeSelect, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Checkbox, Field, Grid, GridItem, Heading, HStack, Link, NativeSelect, Stack, Text } from "@chakra-ui/react";
 import { api, getCart, setCart, getToken, money, type Product, type Me } from "@/lib/api";
 import { Card, PageTitle, Notice, TextField } from "@/components/ui/bits";
 
@@ -8,7 +8,7 @@ type Blocked = { status: "blocked"; orderId: string; message: string; reasonCode
 type Placed = { status: "placed" | "review"; orderId: string; total: number; tenders: any[]; paymentIntent: any };
 
 const Row = ({ k, v, bold }: { k: string; v: string; bold?: boolean }) => (
-  <HStack justify="space-between" py="2" borderBottomWidth={bold ? 0 : "1px"} borderStyle="dashed" fontFamily="system-ui, sans-serif" fontSize={bold ? "md" : "sm"} fontWeight={bold ? "semibold" : undefined}><Text>{k}</Text><Text>{v}</Text></HStack>
+  <HStack justify="space-between" py="2" borderBottomWidth={bold ? 0 : "1px"} borderColor="gray.200" fontSize={bold ? "md" : "sm"} fontWeight={bold ? "semibold" : undefined}><Text>{k}</Text><Text>{v}</Text></HStack>
 );
 
 export default function Checkout() {
@@ -61,16 +61,16 @@ export default function Checkout() {
 
   if (result?.status === "blocked") return (
     <Card textAlign="center" py="12">
-      <Box display="inline-flex" alignItems="center" justifyContent="center" w="56px" h="56px" rounded="full" bg="red.50" color="red.600" fontSize="2xl" mb="3">!</Box>
+      <Box display="inline-flex" alignItems="center" justifyContent="center" w="56px" h="56px" rounded="full" bg="red.50" color="red.600" borderWidth="1px" borderColor="red.200" fontSize="2xl" mb="3">!</Box>
       <Heading size="2xl" mb="2">We couldn't complete your order</Heading>
       <Text color="gray.600" maxW="440px" mx="auto" mb="3">{result.message}</Text>
-      <Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500" mb="4">Nothing has been charged and no stored value has been used.</Text>
+      <Text fontSize="xs" color="gray.500" mb="4">Nothing has been charged and no stored value has been used.</Text>
       <Button asChild variant="outline" size="sm"><a href="/account">Back to account</a></Button>
     </Card>
   );
   if (result) return (
     <Card textAlign="center" py="12">
-      <Box display="inline-flex" alignItems="center" justifyContent="center" w="56px" h="56px" rounded="full" bg="green.50" color="green.700" fontSize="2xl" mb="3">✓</Box>
+      <Box display="inline-flex" alignItems="center" justifyContent="center" w="56px" h="56px" rounded="full" bg="green.50" color="green.700" borderWidth="1px" borderColor="green.200" fontSize="2xl" mb="3">✓</Box>
       <Heading size="2xl" mb="2">{result.status === "review" ? "Order received, we're just checking a detail" : "Order placed"}</Heading>
       <Text color="gray.600" mb="4">Order {result.orderId.slice(-6).toUpperCase()} · {money(result.total)}{result.paymentIntent ? ` · card ${result.paymentIntent.fake ? "(simulated)" : result.paymentIntent.status}` : " · no card charge"}</Text>
       <Button asChild variant="outline" size="sm"><a href="/account">Back to account</a></Button>
@@ -82,13 +82,13 @@ export default function Checkout() {
   return (
     <>
       <PageTitle title="Checkout" sub={`${cart.reduce((a, i) => a + i.qty, 0)} items · ${money(total)}`} />
-      <SimpleGrid columns={{ base: 1, md: 2 }} gap="6" alignItems="start">
-        <Card>
-          <Stack gap="1" fontFamily="system-ui, sans-serif">
+      <Grid templateColumns="repeat(12, 1fr)" gap="6" alignItems="start">
+        <GridItem colSpan={{ base: 12, md: 7 }}><Card>
+          <Stack gap="1">
             <Field.Root mb="1">{label("Deliver to")}
               <NativeSelect.Root><NativeSelect.Field bg="white" value={addressId} onChange={(e) => setAddressId(e.target.value)}>{me.addresses.map((a) => <option key={a.id} value={a.id}>{a.line1}, {a.city} {a.zip}</option>)}</NativeSelect.Field><NativeSelect.Indicator /></NativeSelect.Root>
             </Field.Root>
-            <Text fontSize="xs" color="gray.500" mb="3">Need a new address? Add it on your <Link href="/account" textDecoration="underline">account</Link> page.</Text>
+            <Text fontSize="xs" color="gray.500" mb="3">Need a new address? Add it on your <Link href="/account" color="blue.600">account</Link> page.</Text>
             <TextField label={`Use points (have ${me.balances.points.toFixed(0)})`} type="number" value={usePoints} onChange={(v) => setUsePoints(Number(v))} />
             <TextField label={`Use store credit (have ${money(me.balances.credit)})`} type="number" value={useCredit} onChange={(v) => setUseCredit(Number(v))} />
             <Field.Root mb="3">{label("Gift cards")}
@@ -105,18 +105,18 @@ export default function Checkout() {
               <NativeSelect.Root><NativeSelect.Field bg="white" value={avs} onChange={(e) => setAvs(e.target.value as any)}><option value="pass">billing address matches</option><option value="fail">billing address mismatch (simulate AVS fail)</option></NativeSelect.Field><NativeSelect.Indicator /></NativeSelect.Root>
             </Field.Root>
           </Stack>
-        </Card>
-        <Card>
+        </Card></GridItem>
+        <GridItem colSpan={{ base: 12, md: 5 }}><Card>
           <Row k="Points" v={money(split.pts)} />
           <Row k="Store credit" v={money(split.cr)} />
           <Row k="Gift cards" v={money(split.gc)} />
           <Row k="Card" v={money(split.card)} />
           <Row k="Total" v={money(total)} bold />
           {err && <Notice kind="err">{err}</Notice>}
-          <Button width="100%" mt="3" bg="warm.500" color="white" _hover={{ bg: "warm.600" }} disabled={busy || !cart.length || !addressId} onClick={pay}>{busy ? "Checking…" : `Pay ${money(total)}`}</Button>
-          <Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500" mt="2">Stored value is applied first; the card covers the rest.</Text>
-        </Card>
-      </SimpleGrid>
+          <Button width="100%" mt="3" colorPalette="gray" variant="solid" disabled={busy || !cart.length || !addressId} onClick={pay}>{busy ? "Checking…" : `Pay ${money(total)}`}</Button>
+          <Text fontSize="xs" color="gray.500" mt="2">Stored value is applied first; the card covers the rest.</Text>
+        </Card></GridItem>
+      </Grid>
     </>
   );
 }

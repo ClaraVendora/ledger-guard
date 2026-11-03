@@ -20,12 +20,12 @@ export default function ReviewQueue() {
         <Box flex="1" />
         <HStack gap="2">
           {(["open", "reviewed", "all"] as const).map((f) => (
-            <Button key={f} size="sm" variant={status === f ? "solid" : "outline"} colorPalette={status === f ? "teal" : undefined} onClick={() => setStatus(f)}>{f}</Button>
+            <Button key={f} size="sm" variant={status === f ? "solid" : "outline"} colorPalette="gray" onClick={() => setStatus(f)}>{f}</Button>
           ))}
         </HStack>
       </HStack>
-      <Text color="fg.muted" mb="5">Blocked and review decisions. Mark each one fraud or legitimate; the rules screen uses these to show precision.</Text>
-      <Box borderWidth="1px" rounded="lg" bg="bg.panel" overflow="hidden">
+      <Text color="gray.500" mb="5">Blocked and review decisions. Mark each one fraud or legitimate; the rules screen uses these to show precision.</Text>
+      <Box borderWidth="1px" borderColor="gray.200" rounded="md" bg="white" overflow="hidden">
         <DecisionTable rows={rows} showReview onReview={review} />
       </Box>
     </>

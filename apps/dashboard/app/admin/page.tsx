@@ -16,13 +16,13 @@ export default function Admin() {
     setBusy(false);
   };
 
-  const H = ({ children }: { children: string }) => <Heading size="xs" color="fg.muted" textTransform="uppercase" letterSpacing="wider" mt="6" mb="2">{children}</Heading>;
+  const H = ({ children }: { children: string }) => <Heading size="xs" color="gray.500" textTransform="uppercase" letterSpacing="wider" mt="6" mb="2">{children}</Heading>;
 
   return (
     <>
       <Heading size="lg" mb="1">Demo control</Heading>
-      <Text color="fg.muted" mb="5">Reset state between rehearsals. The baseline replay runs from the terminal (<Code size="sm">pnpm data:replay -- --reset</Code>) because it streams tens of thousands of events.</Text>
-      <Box borderWidth="1px" rounded="lg" bg="bg.panel" p="4">
+      <Text color="gray.500" mb="5">Reset state between rehearsals. The baseline replay runs from the terminal (<Code size="sm">pnpm data:replay -- --reset</Code>) because it streams tens of thousands of events.</Text>
+      <Box borderWidth="1px" borderColor="gray.200" rounded="md" bg="white" p="4">
         <HStack gap="2" flexWrap="wrap">
           <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Health", async () => ({ engine: await get("/health"), merchant: await get("/health", MERCHANT) }))}>Check health</Button>
           <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Reset merchant and seed demo accounts", () => post("/admin/reset", { seed: true, resetLedgerGuard: false }, MERCHANT))}>Reset merchant (keep baseline)</Button>
@@ -30,10 +30,10 @@ export default function Admin() {
           <Button size="sm" variant="outline" disabled={busy} onClick={() => run("Reload rule pack", () => post("/admin/reload-rules", {}))}>Reload rules from YAML</Button>
           <Button size="sm" variant="outline" colorPalette="red" disabled={busy} onClick={() => { if (confirm("Wipe Ledger Guard history for this store? You will need to replay the baseline.")) run("Reset Ledger Guard", () => post("/admin/reset", { store: STORE })); }}>Reset Ledger Guard (wipe history)</Button>
         </HStack>
-        <Text color="fg.muted" fontSize="xs" mt="3">Engine {LG} · Merchant {MERCHANT} · Store {STORE}</Text>
+        <Text color="gray.500" fontSize="xs" mt="3">Engine {LG} · Merchant {MERCHANT} · Store {STORE}</Text>
       </Box>
       <H>Run script</H>
-      <Box borderWidth="1px" rounded="lg" bg="bg.panel" p="4">
+      <Box borderWidth="1px" borderColor="gray.200" rounded="md" bg="white" p="4">
         <List.Root as="ol" gap="2" pl="4">
           <List.Item>Reset merchant (keep baseline). Open the live feed in this window.</List.Item>
           <List.Item>Storefront, second window: log in as <Code size="sm">sam@example.com</Code>, buy cheese and bread with a few points. Feed shows <ActionBadge action="allow" />.</List.Item>
@@ -44,7 +44,7 @@ export default function Admin() {
         </List.Root>
       </Box>
       <H>Log</H>
-      <Box as="pre" fontFamily="mono" fontSize="xs" bg="bg.emphasized" p="3" rounded="md" whiteSpace="pre-wrap" maxH="320px" overflow="auto">{log.join("\n") || "—"}</Box>
+      <Box as="pre" fontFamily="mono" fontSize="xs" bg="gray.50" borderWidth="1px" borderColor="gray.200" p="3" rounded="md" whiteSpace="pre-wrap" maxH="320px" overflow="auto">{log.join("\n") || "—"}</Box>
     </>
   );
 }

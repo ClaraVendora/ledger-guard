@@ -1,9 +1,9 @@
 "use client";
-import { Alert, Box, Field, Heading, Input, Text } from "@chakra-ui/react";
-import type { ReactNode } from "react";
+import { Alert, Box, Button, Field, Heading, Input, Text } from "@chakra-ui/react";
+import type { ComponentProps, ReactNode } from "react";
 
 export const Card = ({ children, ...rest }: { children: ReactNode } & Record<string, unknown>) => (
-  <Box bg="white" borderWidth="1px" rounded="lg" p="4" {...rest}>{children}</Box>
+  <Box bg="white" borderWidth="1px" borderColor="gray.200" rounded="md" p="4" {...rest}>{children}</Box>
 );
 
 export const PageTitle = ({ title, sub }: { title: string; sub?: ReactNode }) => (
@@ -15,10 +15,13 @@ export const PageTitle = ({ title, sub }: { title: string; sub?: ReactNode }) =>
 
 export const H2 = ({ children }: { children: ReactNode }) => <Heading size="md" mt="6" mb="3">{children}</Heading>;
 
+// Primary action: solid black. Secondary: outline gray. No brand colour.
+export const Primary = (p: ComponentProps<typeof Button>) => <Button colorPalette="gray" variant="solid" {...p} />;
+
 export function Notice({ kind, children }: { kind: "ok" | "err" | "info"; children: ReactNode }) {
-  const status = kind === "ok" ? "success" : kind === "err" ? "error" : "warning";
+  const status = kind === "ok" ? "success" : kind === "err" ? "error" : "info";
   return (
-    <Alert.Root status={status} mb="4" fontFamily="system-ui, sans-serif" fontSize="sm">
+    <Alert.Root status={status} mb="4" fontSize="sm">
       <Alert.Indicator />
       <Alert.Content><Alert.Description>{children}</Alert.Description></Alert.Content>
     </Alert.Root>
@@ -27,7 +30,7 @@ export function Notice({ kind, children }: { kind: "ok" | "err" | "info"; childr
 
 export function TextField({ label, value, onChange, type = "text", ...rest }: { label: string; value: string | number; onChange: (v: string) => void; type?: string } & Record<string, unknown>) {
   return (
-    <Field.Root mb="3" fontFamily="system-ui, sans-serif" {...rest}>
+    <Field.Root mb="3" {...rest}>
       <Field.Label fontSize="sm" color="gray.600">{label}</Field.Label>
       <Input bg="white" type={type} value={value} onChange={(e) => onChange(e.target.value)} />
     </Field.Root>

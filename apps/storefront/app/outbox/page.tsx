@@ -15,7 +15,7 @@ export default function Outbox() {
       <Stack gap="3">
         {mails.map((m) => (
           <Card key={m.id}>
-            <Text fontFamily="system-ui, sans-serif" fontSize="xs" color="gray.500">{new Date(m.createdAt).toLocaleString()} · to {m.to} · <Badge size="sm" colorPalette={m.delivered ? "green" : "orange"}>{m.delivered ? "delivered" : `not sent${m.error ? `: ${m.error}` : ""}`}</Badge></Text>
+            <Text fontSize="xs" color="gray.500">{new Date(m.createdAt).toLocaleString()} · to {m.to} · <Badge size="sm" colorPalette={m.delivered ? "green" : "red"}>{m.delivered ? "delivered" : `not sent${m.error ? `: ${m.error}` : ""}`}</Badge></Text>
             <Text fontWeight="semibold" my="1">{m.subject}</Text>
             <Text>{m.body.replace(m.link ?? "", "")}</Text>
             {m.link && <Button asChild size="sm" variant="outline" mt="2"><a href={m.link.replace(/^https?:\/\/[^/]+/, "")}>Open reset link</a></Button>}

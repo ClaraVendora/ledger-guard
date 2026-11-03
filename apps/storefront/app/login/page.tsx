@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Box, Button, HStack, Link } from "@chakra-ui/react";
+import { Button, Grid, GridItem, HStack, Link } from "@chakra-ui/react";
 import { api, setToken } from "@/lib/api";
 import { PageTitle, Notice, TextField } from "@/components/ui/bits";
 
@@ -18,17 +18,17 @@ export default function Login() {
     } catch (ex: any) { setErr(ex.message); }
   };
   return (
-    <Box maxW="420px">
+    <Grid templateColumns="repeat(12, 1fr)"><GridItem colSpan={{ base: 12, md: 5 }}>
       <PageTitle title="Log in" sub="Demo accounts: dana@example.com, jj.quick@example.com, sam@example.com. Password: password123." />
       <form onSubmit={submit}>
         <TextField label="Email" value={email} onChange={setEmail} />
         <TextField label="Password" type="password" value={password} onChange={setPassword} />
         {err && <Notice kind="err">{err}</Notice>}
         <HStack gap="4">
-          <Button type="submit" bg="brand.500" color="white" _hover={{ bg: "brand.600" }}>Log in</Button>
-          <Link href="/forgot" fontSize="sm" fontFamily="system-ui, sans-serif" color="gray.600">Forgot password?</Link>
+          <Button type="submit" colorPalette="gray" variant="solid">Log in</Button>
+          <Link href="/forgot" fontSize="sm" color="blue.600">Forgot password?</Link>
         </HStack>
       </form>
-    </Box>
+    </GridItem></Grid>
   );
 }

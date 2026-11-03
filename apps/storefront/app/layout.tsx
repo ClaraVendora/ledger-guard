@@ -7,11 +7,11 @@ export const metadata = { title: "Orchard & Vine", description: "Specialty groce
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
         <Provider>
           <Header />
-          <Container maxW="5xl" py="8">{children}</Container>
+          <Container maxW="6xl" py="8">{children}</Container>
         </Provider>
       </body>
     </html>
