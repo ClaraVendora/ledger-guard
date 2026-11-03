@@ -1,0 +1,19 @@
+{
+  "name": "ledger-guard-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "db:up": "docker compose up -d",
+    "db:push": "turbo run db:push",
+    "data:generate": "pnpm --filter @lg/data generate",
+    "data:replay": "pnpm --filter @lg/data replay",
+    "data:report": "pnpm --filter @lg/data report"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.6.3"
+  }
+}

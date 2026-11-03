@@ -1,0 +1,191 @@
+# Ledger Guard rule pack v1
+#
+# A rule fires when EVERY condition is true. Conditions compare a feature to a
+# value. A value may be a literal, or "p95:<stat>" to use a store-relative
+# percentile computed from the store's own history.
+#
+# weight adds to the score; severity is the worst label among fired rules.
+# Decision: block if score >= 60 or any critical; review if score >= 30.
+version: 1
+thresholds:
+  block_score: 60
+  review_score: 30
+rules:
+
+  # ---------- issuance: merchant created the value ----------
+  - id: refund_credit_then_spend
+    group: issuance
+    severity: high
+    weight: 40
+    applies_to: [order.created]
+    explanation: Store credit issued from a refund claim was spent within an hour, by a customer whose refund rate is above the store's 95th percentile.
+    when:
+      - { feature: last_issue_reason, op: eq, value: refund }
+      - { feature: minutes_since_last_issue, op: lte, value: 60 }
+      - { feature: refund_value_ratio_90d, op: gte, value: "p95:refund_value_ratio_90d" }
+    evidence: [last_issue_reason, minutes_since_last_issue, refund_value_ratio_90d, refunds_90d_count]
+
+  - id: promo_credit_linked_accounts
+    group: issuance
+    severity: medium
+    weight: 30
+    applies_to: [value.issue]
+    explanation: Promo or referral credit issued to an account on a device shared by several accounts.
+    when:
+      - { feature: issue_reason, op: in, value: [promo, referral] }
+      - { feature: distinct_accounts_per_device_30d, op: gte, value: 3 }
+    evidence: [issue_reason, issue_amount, distinct_accounts_per_device_30d]
+
+  - id: refund_claim_rate
+    group: issuance
+    severity: medium
+    weight: 30
+    applies_to: [refund.created]
+    explanation: Refund claim from a customer whose 90-day refund count is above the store's 95th percentile.
+    when:
+      - { feature: refunds_90d_count, op: gte, value: "p95:refunds_90d_count" }
+      - { feature: refunds_90d_count, op: gte, value: 2 }
+    evidence: [refunds_90d_count, refund_value_ratio_90d, refund_reason, refund_destination]
+
+  # ---------- load: customer paid value in ----------
+  - id: load_then_resalable_spend
+    group: load
+    severity: high
+    weight: 40
+    applies_to: [order.created]
+    explanation: Stored value loaded within the last 6 hours was spent on an order that is mostly resalable goods.
+    when:
+      - { feature: hours_since_last_load, op: lte, value: 6 }
+      - { feature: resalable_share, op: gte, value: 0.6 }
+      - { feature: stored_value_share, op: gte, value: 0.5 }
+    evidence: [hours_since_last_load, resalable_share, stored_value_share, order_total]
+
+  - id: many_cards_one_account
+    group: load
+    severity: high
+    weight: 40
+    applies_to: [value.load]
+    explanation: This is at least the third distinct card loading value onto one account within 7 days.
+    when:
+      - { feature: load_distinct_cards_7d, op: gte, value: 2 }
+    evidence: [load_distinct_cards_7d, hours_since_last_load]
+
+  - id: gift_card_enumeration
+    group: load
+    severity: critical
+    weight: 70
+    applies_to: [giftcard.balance_check]
+    explanation: Burst of gift card balance checks from one device with a high invalid ratio.
+    when:
+      - { feature: balance_checks_1h_device, op: gte, value: 20 }
+      - { feature: balance_check_invalid_ratio_1h, op: gte, value: 0.8 }
+    evidence: [balance_checks_1h_device, balance_check_invalid_ratio_1h]
+
+  # ---------- takeover: someone else is in the account ----------
+  - id: redeem_after_reset
+    group: takeover
+    severity: critical
+    weight: 60
+    applies_to: [order.created]
+    explanation: Order paid mostly from stored value within 24 hours of a password reset or new device.
+    when:
+      - { feature: hours_since_reset, op: lte, value: 24 }
+      - { feature: stored_value_share, op: gte, value: 0.7 }
+    evidence: [hours_since_reset, hours_since_new_device, stored_value_share, order_total, card_leg_amount]
+
+  - id: dormant_wakeup_large_redeem
+    group: takeover
+    severity: high
+    weight: 35
+    applies_to: [order.created]
+    explanation: Account dormant for 60 days or more placed an order far above its usual stored-value share.
+    when:
+      - { feature: days_since_prev_order, op: gte, value: 60 }
+      - { feature: hist_order_count, op: gte, value: 1 }
+      - { feature: stored_value_share, op: gte, value: 0.5 }
+    evidence: [days_since_prev_order, stored_value_share, hist_stored_value_share, order_total]
+
+  - id: new_address_stored_value_spike
+    group: takeover
+    severity: high
+    weight: 35
+    applies_to: [order.created]
+    explanation: Shipping to a new address with a stored-value share far above the customer's own history.
+    when:
+      - { feature: new_shipping_address, op: eq, value: true }
+      - { feature: stored_value_share, op: gte, value: 0.5 }
+      - { feature: hist_order_count, op: gte, value: 1 }
+      - { feature: hist_stored_value_share, op: lte, value: 0.25 }
+    evidence: [new_shipping_address, stored_value_share, hist_stored_value_share, distinct_accounts_per_address_30d]
+
+  - id: foreign_country_redeem
+    group: takeover
+    severity: high
+    weight: 35
+    applies_to: [order.created, value.transfer]
+    explanation: Stored value redeemed or transferred from a country the customer has not used before, within 72 hours of a reset or new device.
+    when:
+      - { feature: ip_country_is_new, op: eq, value: true }
+    any:
+      - { feature: hours_since_reset, op: lte, value: 72 }
+      - { feature: hours_since_new_device, op: lte, value: 72 }
+    evidence: [ip_country, usual_country, hours_since_reset, hours_since_new_device, stored_value_share]
+
+  - id: risky_network_redeem
+    group: takeover
+    severity: medium
+    weight: 30
+    applies_to: [order.created, value.transfer, value.load]
+    explanation: Stored value moved from a datacentre, VPN or Tor address; residential and mobile networks are what real shoppers use.
+    when:
+      - { feature: ip_risky_network, op: eq, value: true }
+    evidence: [ip_asn_type, ip_country, stored_value_share, transfer_amount]
+
+  # ---------- laundering: moving value through the ledger ----------
+  - id: refund_to_stored_value_then_transfer
+    group: laundering
+    severity: high
+    weight: 40
+    applies_to: [value.transfer]
+    explanation: A refund was pushed onto stored value and transferred out within 24 hours.
+    when:
+      - { feature: hours_since_refund_to_stored_value, op: lte, value: 24 }
+    evidence: [hours_since_refund_to_stored_value, transfer_amount]
+
+  - id: transfer_after_reset
+    group: laundering
+    severity: critical
+    weight: 60
+    applies_to: [value.transfer]
+    explanation: Transfer within 24 hours of a password reset or new device on the sending or receiving account, or from an account created in the last 2 days.
+    when:
+      - { feature: transfer_amount, op: gte, value: 25 }
+    any:
+      - { feature: sender_hours_since_reset, op: lte, value: 24 }
+      - { feature: receiver_hours_since_reset, op: lte, value: 24 }
+      - { feature: account_age_days, op: lte, value: 2 }
+    evidence: [transfer_amount, sender_hours_since_reset, receiver_hours_since_reset, account_age_days, receiver_account_age_days, distinct_accounts_per_device_30d]
+
+  - id: transfer_from_linked_new_account
+    group: laundering
+    severity: high
+    weight: 35
+    applies_to: [value.transfer]
+    explanation: Transfer out of an account created in the last 2 days on a device shared by several accounts; credit is being consolidated.
+    when:
+      - { feature: account_age_days, op: lte, value: 2 }
+      - { feature: distinct_accounts_per_device_30d, op: gte, value: 3 }
+    evidence: [transfer_amount, account_age_days, distinct_accounts_per_device_30d, receiver_account_age_days]
+
+  - id: gift_card_from_other_account
+    group: laundering
+    severity: medium
+    weight: 25
+    applies_to: [order.created]
+    explanation: Gift card tendered was loaded by a different account; combined with a new address or a recent reset.
+    when:
+      - { feature: gift_cards_loaded_by_other, op: gte, value: 1 }
+    any:
+      - { feature: new_shipping_address, op: eq, value: true }
+      - { feature: hours_since_reset, op: lte, value: 72 }
+    evidence: [gift_cards_loaded_by_other, gift_card_count_in_order, new_shipping_address, hours_since_reset]

@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+**/.next
+**/dist
+.turbo
+**/.turbo
+packages/data/out
+.git
+*.tar.gz
+.*.tar.gz
+.env
+**/.env

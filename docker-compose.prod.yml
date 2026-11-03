@@ -1,0 +1,58 @@
+# Builds and runs the four production images with the same Dockerfiles Railway uses.
+# Postgres and Mailpit come from docker-compose.yml (pnpm db:up) and are reached over the host.
+#   docker compose -f docker-compose.prod.yml up --build
+services:
+  ledger-guard:
+    build:
+      context: .
+      dockerfile: deploy/node.Dockerfile
+      args: { PKG: "@lg/ledger-guard" }
+    environment:
+      PORT: 4100
+      LG_DATABASE_URL: postgres://lg:lg@host.docker.internal:5432/ledger_guard
+    ports: ["4100:4100"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  merchant-api:
+    build:
+      context: .
+      dockerfile: deploy/node.Dockerfile
+      args: { PKG: "@lg/merchant-api" }
+    environment:
+      PORT: 4000
+      MERCHANT_DATABASE_URL: postgres://lg:lg@host.docker.internal:5432/merchant
+      LEDGER_GUARD_URL: http://ledger-guard:4100
+      STOREFRONT_URL: http://localhost:3000
+      STORE_ID: demo-grocer
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      MAIL_TRANSPORT: smtp
+      SMTP_HOST: host.docker.internal
+      SMTP_PORT: 1025
+    ports: ["4000:4000"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on: [ledger-guard]
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: deploy/next.Dockerfile
+      args:
+        PKG: "@lg/dashboard"
+        DIR: apps/dashboard
+        NEXT_PUBLIC_LEDGER_GUARD_URL: http://localhost:4100
+        NEXT_PUBLIC_MERCHANT_API_URL: http://localhost:4000
+        NEXT_PUBLIC_STORE_ID: demo-grocer
+    environment: { PORT: 3001, HOSTNAME: 0.0.0.0 }
+    ports: ["3001:3001"]
+
+  storefront:
+    build:
+      context: .
+      dockerfile: deploy/next.Dockerfile
+      args:
+        PKG: "@lg/storefront"
+        DIR: apps/storefront
+        NEXT_PUBLIC_MERCHANT_API_URL: http://localhost:4000
+        NEXT_PUBLIC_MAILBOX_URL: http://localhost:8025
+    environment: { PORT: 3000, HOSTNAME: 0.0.0.0 }
+    ports: ["3000:3000"]

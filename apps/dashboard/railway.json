@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "deploy/next.Dockerfile",
+    "buildArgs": {
+      "PKG": "@lg/dashboard",
+      "DIR": "apps/dashboard"
+    }
+  },
+  "deploy": {
+    "restartPolicyType": "ON_FAILURE"
+  }
+}

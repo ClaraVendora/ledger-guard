@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ledger-guard-pg
+    environment:
+      POSTGRES_USER: lg
+      POSTGRES_PASSWORD: lg
+      POSTGRES_DB: lg
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ledger-guard-mail
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 500
+volumes:
+  pgdata:
