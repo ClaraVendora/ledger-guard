@@ -148,31 +148,34 @@ Every value lives in `.env.example`. Copy it per app; `.env` files are git-ignor
 
 ## Deploy to Railway
 
-One project, six services.
+One Railway project, six services. Builder is Railpack; each service's `railway.json` carries its build and start command.
 
 1. Postgres plugin
-   - Data tab, Query: `create database merchant; create database ledger_guard;`
+   - one database; each service creates its own schema (`ledger_guard`, `merchant`) on first start, nothing to run by hand
+   - Settings, Networking, enable TCP Proxy so the baseline replay can be run from a laptop
 2. Mailpit
    - New service from Docker image `axllent/mailpit`
    - Settings, Networking: generate a public domain on port 8025
 3. Four services from this GitHub repo: `ledger-guard`, `merchant-api`, `dashboard`, `storefront`
-   - root directory stays `/` (the Dockerfiles need the whole workspace)
-   - Settings, Config-as-code: `services/ledger-guard/railway.json`, `apps/merchant-api/railway.json`, `apps/dashboard/railway.json`, `apps/storefront/railway.json`
-   - generate a public domain for each of the four
+   - Railway detects the four `railway.json` files and creates one service each; root directory stays `/`
+   - generate a public domain for each; set the domain's target port to the port the deploy log says the app is listening on (Railway injects `PORT`, usually 8080)
+   - if a service was created before the start command existed, set Settings, Deploy, Custom Start Command to `pnpm --filter <package> start:railway` for the two Fastify services and `pnpm --filter <package> start` for the two Next.js apps
 4. Variables, per service
 
 | Service | Variables |
 | --- | --- |
-| ledger-guard | `LG_DATABASE_URL` = the Postgres URL with database `ledger_guard` |
-| merchant-api | `MERCHANT_DATABASE_URL` (database `merchant`), `LEDGER_GUARD_URL` = `http://${{ledger-guard.RAILWAY_PRIVATE_DOMAIN}}:${{ledger-guard.PORT}}`, `STOREFRONT_URL`, `STORE_ID` = `demo-grocer`, `STRIPE_SECRET_KEY`, `MAIL_TRANSPORT` = `smtp`, `SMTP_HOST` = `${{mailpit.RAILWAY_PRIVATE_DOMAIN}}`, `SMTP_PORT` = `1025` |
+| ledger-guard | `LG_DATABASE_URL` = `${{Postgres.DATABASE_URL}}` |
+| merchant-api | `MERCHANT_DATABASE_URL` = `${{Postgres.DATABASE_URL}}`, `LEDGER_GUARD_URL` = ledger-guard public URL, `STOREFRONT_URL` = storefront public URL, `STORE_ID` = `demo-grocer`, `STRIPE_SECRET_KEY`, `MAIL_TRANSPORT` = `smtp`, `SMTP_HOST` = `${{mailpit.RAILWAY_PRIVATE_DOMAIN}}`, `SMTP_PORT` = `1025` |
 | storefront | `NEXT_PUBLIC_MERCHANT_API_URL`, `NEXT_PUBLIC_MAILBOX_URL` |
 | dashboard | `NEXT_PUBLIC_LEDGER_GUARD_URL`, `NEXT_PUBLIC_MERCHANT_API_URL`, `NEXT_PUBLIC_STORE_ID` |
 
 - `NEXT_PUBLIC_*` values are baked in at build time, so set them before the first build and redeploy the two frontends if a URL changes
-- Both Fastify services run `drizzle-kit push` on start, so tables are created on first deploy
-- Load the baseline from your laptop against the deployed engine:
+- Both Fastify services run `drizzle-kit push` on start (`start:railway`), so tables are created on first deploy
+- Load the baseline from a laptop against the deployed engine, then seed the merchant from the dashboard:
+  - `LEDGER_GUARD_URL=https://<ledger-guard domain> pnpm data:generate -- --customers 300`
   - `LEDGER_GUARD_URL=https://<ledger-guard domain> pnpm data:replay -- --reset`
-  - then dashboard, Demo control, "Reset merchant (keep baseline)"
+  - dashboard, Demo control, "Reset merchant (keep baseline)"
+- Turbo filters out unknown environment variables, so if `drizzle-kit push` ever has to be run from a laptop, run it inside the service folder with `npx drizzle-kit push --force` and the Postgres public URL, not through `pnpm db:push`
 
 ## Scope and trade-offs
 
