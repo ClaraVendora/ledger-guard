@@ -85,7 +85,8 @@ Then, in a second terminal, load the baseline and seed the demo accounts:
 
 ```bash
 pnpm data:generate -- --customers 300     # writes packages/data/out/events.jsonl and labels.json
-pnpm data:replay -- --reset               # streams the events into Ledger Guard in time order, about 2 minutes
+pnpm data:replay -- --reset               # streams the events into Ledger Guard in time order, about 3 minutes
+# or: dashboard, Demo control, "Replay baseline". Same data, generated inside the engine, no terminal needed
 pnpm data:report                          # precision and recall against the injected scenarios
 ```
 
@@ -123,7 +124,7 @@ Two browser windows: the dashboard (merchant) and the storefront (customer). The
 5. Back on Dana's tab: add a new address, cart, "load the wine order", checkout. Stored value covers most of the USD 403; the card covers the rest (about USD 20 if you set credit to 165). Checkout returns the block screen
 6. Dashboard: open the alert. Walk the fired rules and the timeline, which shows every step from the burner device. Then Rules: raise the `redeem_after_reset` stored-value threshold and watch the counts change across the whole history
 
-Before the real run: Demo control, "Reset Ledger Guard", replay the baseline again, "Reset merchant". This makes Dana dormant again and clears rehearsal noise from the timeline.
+Before the real run: Demo control, "Replay baseline" (about 3 minutes, wipes the store first), then "Reset merchant". This makes Dana dormant again and clears rehearsal noise from the timeline.
 
 ## Environment variables
 
@@ -197,6 +198,6 @@ Out of scope, on purpose
 300 customers, 180 days, 21,000 events, 126 labelled fraud events across five scenarios: account takeover and drain, refund-to-credit farming, promo and referral linking, gift card enumeration, load and spend.
 
 - precision 0.93, recall 0.96
-- account takeover: 6 of 6 caught; the demo order scores 160 with four rules fired
+- account takeover: 6 of 6 caught; the demo order scores 195 with five rules fired
 
 Regenerate the numbers with `pnpm data:report`.

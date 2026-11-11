@@ -13,11 +13,13 @@ import type { Event, Tender, LineItem } from "@lg/events";
 import { makeRng, type Rng } from "./rng.js";
 import { injectScenarios, type World } from "./scenarios.js";
 
-const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => (a.startsWith("--") ? [a.slice(2), arr[i + 1]] : [])).filter((x) => x.length));
-const N = Number(args.customers ?? 2000);
-const DAYS = Number(args.days ?? 180);
-const SEED = Number(args.seed ?? 7);
-const STORE = String(args.store ?? "demo-grocer");
+import { pathToFileURL } from "node:url";
+
+export type GenerateOptions = { customers?: number; days?: number; seed?: number; store?: string };
+export const DEFAULTS = { customers: 300, days: 180, seed: 7, store: "demo-grocer" };
+
+// Set per generateWorld() call; the event builders below read it.
+let STORE = DEFAULTS.store;
 
 const CATALOGUE: Omit<LineItem, "qty">[] = [
   { sku: "WINE-BAROLO-21", category: "wine", unitPrice: 68, resalable: true },
@@ -142,7 +144,16 @@ export function orderEvent(c: Customer, at: Date, items: LineItem[], tenders: Te
   } as Event;
 }
 
-function main() {
+/**
+ * Build the synthetic store in memory. Used by the CLI below and by the engine's
+ * /admin/replay endpoint, so the dashboard can load the baseline without a terminal.
+ */
+export function generateWorld(opts: GenerateOptions = {}) {
+  const N = opts.customers ?? DEFAULTS.customers;
+  const DAYS = opts.days ?? DEFAULTS.days;
+  const SEED = opts.seed ?? DEFAULTS.seed;
+  STORE = opts.store ?? DEFAULTS.store;
+  seq = 0;
   const rng = makeRng(SEED);
   const end = new Date();
   const start = new Date(end.getTime() - DAYS * DAY);
@@ -228,13 +239,25 @@ function main() {
   const all = world.events; // scenarios may replace the array when trimming a victim's recent history
 
   all.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  const byType = all.reduce<Record<string, number>>((m, e) => ((m[e.type] = (m[e.type] ?? 0) + 1), m), {});
+  return { events: all, labels, summary: { store: STORE, customers: N, days: DAYS, events: all.length, labelled: Object.keys(labels).length, byType } };
+}
+
+function main() {
+  const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => (a.startsWith("--") ? [a.slice(2), arr[i + 1]] : [])).filter((x) => x.length));
+  const { events: all, labels, summary } = generateWorld({
+    customers: args.customers ? Number(args.customers) : undefined,
+    days: args.days ? Number(args.days) : undefined,
+    seed: args.seed ? Number(args.seed) : undefined,
+    store: args.store ? String(args.store) : undefined,
+  });
   const outDir = join(dirname(fileURLToPath(import.meta.url)), "..", "out");
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, "events.jsonl"), all.map((e) => JSON.stringify(e)).join("\n") + "\n");
   writeFileSync(join(outDir, "labels.json"), JSON.stringify(labels, null, 2));
-  const byType = all.reduce<Record<string, number>>((m, e) => ((m[e.type] = (m[e.type] ?? 0) + 1), m), {});
-  console.log(`store=${STORE} customers=${N} days=${DAYS} events=${all.length} labelled=${Object.keys(labels).length}`);
-  console.log(byType);
+  console.log(`store=${summary.store} customers=${summary.customers} days=${summary.days} events=${summary.events} labelled=${summary.labelled}`);
+  console.log(summary.byType);
 }
 
-main();
+// Run the CLI only when executed directly, not when imported by the engine.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

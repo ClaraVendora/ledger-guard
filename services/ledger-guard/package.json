@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "pnpm --filter @lg/events build && tsc -p tsconfig.json && mkdir -p dist/rules && cp src/rules/pack.yaml dist/rules/",
+    "build": "pnpm --filter @lg/events build && pnpm --filter @lg/data build && tsc -p tsconfig.json && mkdir -p dist/rules && cp src/rules/pack.yaml dist/rules/",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:push": "drizzle-kit push",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",
+    "@lg/data": "workspace:*",
     "@lg/events": "workspace:*",
     "drizzle-orm": "^0.36.4",
     "fastify": "^5.1.0",

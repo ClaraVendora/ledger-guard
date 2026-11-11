@@ -163,6 +163,9 @@ importers:
       '@fastify/cors':
         specifier: ^10.0.1
         version: 10.1.0
+      '@lg/data':
+        specifier: workspace:*
+        version: link:../../packages/data
       '@lg/events':
         specifier: workspace:*
         version: link:../../packages/events
