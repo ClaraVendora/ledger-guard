@@ -10,6 +10,8 @@ import { decide, currentPack, reloadPack } from "./engine/decide.js";
 import { recomputeStoreStats } from "./engine/stats.js";
 import { getOverrides, setOverride, applyOverride, evalCondition, getStoreStats } from "./engine/rules.js";
 import { computeFeatures } from "./engine/features.js";
+import { ingest } from "./ingest.js";
+import { startReplay, replayStatus } from "./replay.js";
 
 const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
 await app.register(cors, { origin: true });
@@ -30,45 +32,8 @@ app.post("/events", async (req, reply) => {
   }
   const out = [];
   for (const e of incoming) {
-    const existing = await db.select({ id: decisions.id, action: decisions.action, score: decisions.score, severity: decisions.severity, firedRules: decisions.firedRules, features: decisions.features }).from(decisions).where(eq(decisions.id, e.id)).limit(1);
-    if (existing[0]) {
-      out.push({ eventId: e.id, ...existing[0], idempotent: true });
-      continue;
-    }
-    // store first so features can see prior events of the same batch in time order
-    await db
-      .insert(events)
-      .values({
-        id: e.id,
-        storeId: e.storeId,
-        type: e.type,
-        customerId: e.customerId ?? null,
-        deviceId: e.deviceId ?? null,
-        ip: e.ip ?? null,
-        ipCountry: e.ipCountry ?? null,
-        ipAsnType: e.ipAsnType ?? null,
-        occurredAt: new Date(e.occurredAt),
-        payload: e,
-      })
-      .onConflictDoNothing();
-    const d = await decide(e);
-    await db
-      .insert(decisions)
-      .values({
-        id: e.id,
-        storeId: e.storeId,
-        customerId: e.customerId ?? null,
-        eventType: e.type,
-        occurredAt: new Date(e.occurredAt),
-        action: d.action,
-        score: d.score,
-        severity: d.severity,
-        firedRules: d.firedRules,
-        features: d.features,
-        ruleVersion: currentPack().version,
-      })
-      .onConflictDoNothing();
-    req.log.info({ eventId: e.id, type: e.type, action: d.action, score: d.score, rules: d.firedRules.map((r) => r.ruleId) }, "decision");
+    const d = await ingest(e);
+    if (!d.idempotent) req.log.info({ eventId: e.id, type: e.type, action: d.action, score: d.score, rules: d.firedRules.map((r) => r.ruleId) }, "decision");
     out.push(d);
   }
   return Array.isArray(req.body) ? out : out[0];
@@ -230,6 +195,18 @@ app.post("/admin/reset", async (req) => {
 });
 
 app.post("/admin/reload-rules", async () => ({ version: reloadPack().version }));
+
+/**
+ * Replay the synthetic baseline into this store, in the background. Wipes the
+ * store first unless reset=false. Poll GET /admin/replay for progress.
+ */
+app.post("/admin/replay", async (req, reply) => {
+  const body = z.object({ store: z.string(), customers: z.number().int().positive().max(5000).optional(), days: z.number().int().positive().max(365).optional(), seed: z.number().int().optional(), reset: z.boolean().optional() }).parse(req.body ?? {});
+  const started = startReplay(body, (o, m) => req.log.info(o, m));
+  if (!started) return reply.code(409).send({ ...replayStatus(), error: "replay_running" });
+  return reply.code(202).send(replayStatus());
+});
+app.get("/admin/replay", async () => replayStatus());
 
 /** Dry run a single event without storing it. Useful for the storefront's "what would happen" and for tests. */
 app.post("/evaluate", async (req, reply) => {
